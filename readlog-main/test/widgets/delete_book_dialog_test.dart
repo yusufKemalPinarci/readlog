@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:berber/shared/widgets/delete_book_dialog.dart';
+import 'package:libris/shared/widgets/delete_book_dialog.dart';
 
 void main() {
   group('DeleteBookDialog', () {

@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:berber/shared/services/local_storage_service.dart';
-import 'package:berber/shared/services/data_backup_service.dart';
+import 'package:libris/shared/services/local_storage_service.dart';
+import 'package:libris/shared/services/data_backup_service.dart';
 
 void main() {
   group('DataBackupService', () {

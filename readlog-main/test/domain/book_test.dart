@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:berber/features/books/domain/book.dart';
+import 'package:libris/features/books/domain/book.dart';
 
 void main() {
   group('Book', () {

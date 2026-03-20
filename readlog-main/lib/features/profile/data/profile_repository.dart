@@ -13,9 +13,9 @@ class LocalProfileRepository implements ProfileRepository {
 
   static const _defaultProfile = UserProfile(
     id: 'u1',
-    name: 'Okuyucu',
-    username: 'okuyucu',
-    dailyGoalMinutes: 30,
+    name: '',
+    username: '',
+    dailyGoalMinutes: 0,
   );
 
   @override

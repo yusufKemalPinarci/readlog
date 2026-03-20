@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:berber/features/profile/application/streak_service.dart';
-import 'package:berber/features/reading/domain/reading_log.dart';
+import 'package:libris/features/profile/application/streak_service.dart';
+import 'package:libris/features/reading/domain/reading_log.dart';
 
 ReadingLog _log(DateTime date, {String bookId = 'b1', int minutes = 30}) {
   return ReadingLog(

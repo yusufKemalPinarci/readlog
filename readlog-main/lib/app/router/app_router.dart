@@ -4,9 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../shared/widgets/page_turn_transition.dart';
 
-import '../../features/auth/presentation/login_screen.dart';
-import '../../features/auth/presentation/register_screen.dart';
-
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/library/presentation/add_book_screen.dart';
 import '../../features/library/presentation/barcode_scanner_screen.dart';
@@ -25,7 +22,6 @@ import '../../features/stats/presentation/streak_screen.dart';
 import '../../shared/services/local_storage_service.dart';
 import '../../features/profile/presentation/calendar_day_detail_screen.dart';
 import '../../features/reading/domain/reading_log.dart';
-import '../../features/auth/application/auth_service.dart'; // Assuming authProvider is here
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -34,42 +30,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final storage = ref.read(localStorageServiceProvider);
       final isFirstLaunch = storage.getIsFirstLaunch();
 
-      // If first launch and not already on onboarding
+      // İlk açılışta onboarding'e yönlendir
       if (isFirstLaunch && state.fullPath != Routes.onboarding) {
-        return Routes.onboarding; // Go to onboarding
+        return Routes.onboarding;
       }
 
-      // If verifying onboarding but first launch is false (user finished onboarding),
-      // redirect away from onboarding.
+      // Onboarding tamamlandıysa home'a yönlendir
       if (!isFirstLaunch && state.fullPath == Routes.onboarding) {
-        return Routes.login; // Or Home, but let auth logic decide
-      }
-
-      // Auth logic
-      final isAuthenticated = ref.read(authProvider).user != null;
-      final isLoggingIn = state.fullPath == Routes.login || state.fullPath == '/login/register';
-
-      if (!isAuthenticated && !isLoggingIn && state.fullPath != Routes.onboarding) {
-        return Routes.login;
-      }
-
-      if (isAuthenticated && isLoggingIn) {
         return Routes.home;
       }
 
-      return null; // No redirect needed
+      return null;
     },
     routes: [
-      GoRoute(
-        path: Routes.login,
-        builder: (context, state) => const LoginScreen(),
-        routes: [
-          GoRoute(
-            path: 'register',
-            builder: (context, state) => const RegisterScreen(),
-          ),
-        ],
-      ),
       GoRoute(
         path: Routes.onboarding,
         builder: (context, state) => const OnboardingScreen(),
@@ -184,7 +157,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 });
 
 abstract final class Routes {
-  static const login = '/login';
   static const home = '/home';
   static const addBook = '/add-book';
   static String editBook(String id) => '/add-book?bookId=$id';

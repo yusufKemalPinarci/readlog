@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../app/router/app_router.dart';
 import '../../../app/theme/theme_manager.dart';
 import '../../../app/theme/theme_color_palette.dart';
 import '../../../shared/widgets/book_scaffold.dart';
@@ -205,7 +204,22 @@ class SettingsScreen extends ConsumerWidget {
                       title: 'Yardım & Destek',
                       trailing: const Icon(Icons.open_in_new, size: 18),
                       onTap: () {
-                        // Yardım & Destek (ileride implement edilecek)
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Yardım & Destek'),
+                            content: const Text(
+                              'İletişim: libris.app@ysfkml.com\n\n'
+                              'Sorularınız ve önerileriniz için bize ulaşabilirsiniz.',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text('Tamam'),
+                              ),
+                            ],
+                          ),
+                        );
                       },
                     ),
                     const Divider(height: 1),
@@ -213,9 +227,35 @@ class SettingsScreen extends ConsumerWidget {
                       icon: Icons.info_outline,
                       iconColor: Colors.grey,
                       title: 'Gizlilik ve Güvenlik',
-                      subtitle: 'Uygulamayı nasıl kullandığını öğren',
+                      subtitle: 'Verileriniz sadece cihazınızda saklanır',
                       onTap: () {
-                         // Gizlilik politikası (web view veya dialog)
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Gizlilik ve Güvenlik'),
+                            content: const SingleChildScrollView(
+                              child: Text(
+                                'Libris tamamen çevrimdışı çalışır.\n\n'
+                                '• Tüm verileriniz yalnızca cihazınızda saklanır.\n'
+                                '• Hiçbir kişisel veriniz sunuculara gönderilmez.\n'
+                                '• Kitap araması için yalnızca OpenLibrary API kullanılır '
+                                '(arama sorgusu dışında veri paylaşılmaz).\n'
+                                '• Uygulamanızı sildiğinizde tüm veriler silinir.\n\n'
+                                'İzin istenen özellikler:\n'
+                                '• Kamera: Kitap kapak fotoğrafları\n'
+                                '• Mikrofon: Sesli okuma notları\n'
+                                '• Depolama: Kapak, ses ve not dosyaları\n'
+                                '• İnternet: Kitap araması',
+                              ),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text('Tamam'),
+                              ),
+                            ],
+                          ),
+                        );
                       },
                     ),
                     const Divider(height: 1),
@@ -307,30 +347,6 @@ class SettingsScreen extends ConsumerWidget {
                       },
                     ),
                   ],
-                ),
-              ),
-              const SizedBox(height: 32),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      context.go(Routes.login);
-                    },
-                    icon: const Icon(Icons.logout_rounded, color: Colors.red),
-                    label: const Text(
-                      'Çıkış Yap',
-                      style: TextStyle(color: Colors.red),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.red.withValues(alpha: 0.3)),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                  ),
                 ),
               ),
               const SizedBox(height: 32),

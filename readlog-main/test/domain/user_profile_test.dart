@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:berber/features/profile/domain/user_profile.dart';
+import 'package:libris/features/profile/domain/user_profile.dart';
 
 void main() {
   group('UserProfile', () {

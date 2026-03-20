@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:berber/shared/widgets/page_turn_transition.dart';
+import 'package:libris/shared/widgets/page_turn_transition.dart';
 import 'package:go_router/go_router.dart';
 
 void main() {

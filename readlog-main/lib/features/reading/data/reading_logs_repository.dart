@@ -190,32 +190,29 @@ class InMemoryReadingLogsRepository implements ReadingLogsRepository {
 }
 
 class LocalReadingLogsRepository implements ReadingLogsRepository {
-  LocalReadingLogsRepository(this._storage, {List<ReadingLog>? seed})
+  LocalReadingLogsRepository(this._storage)
       : _noteService = NoteStorageService() {
-    _init(seed);
+    _init();
   }
 
   final LocalStorageService _storage;
   final NoteStorageService _noteService;
   List<ReadingLog> _items = [];
 
-  void _init(List<ReadingLog>? seed) {
-    _reload(seed);
+  void _init() {
+    _reload();
   }
 
-  void _reload(List<ReadingLog>? seed) {
+  void _reload() {
     final storedData = _storage.loadReadingLogs();
     if (storedData.isNotEmpty) {
       _items = storedData.map((json) => ReadingLog.fromJson(json)).toList();
-    } else if (seed != null) {
-      _items = [...seed];
-      _save();
     }
   }
 
   /// Verileri storage'dan yeniden yükle (import sonrası kullanılır)
   Future<void> reload() async {
-    _reload(null);
+    _reload();
   }
 
   Future<void> _save() async {

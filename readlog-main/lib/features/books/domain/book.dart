@@ -31,7 +31,6 @@ class Book {
   final int totalPages;
   final BookShelf shelf;
 
-  // Basit metrikler (ileride Firebase ile genişletilecek)
   final int? currentPage;
   final int? totalMinutes;
   final String? category;

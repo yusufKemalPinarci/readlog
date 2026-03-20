@@ -23,7 +23,6 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.ysfkml.libris"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
@@ -34,15 +33,6 @@ android {
     }
 
     signingConfigs {
-        // Release signing config için keystore dosyası oluşturmanız gerekiyor
-        // Komut: keytool -genkey -v -keystore ~/upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
-        // Daha sonra android/key.properties dosyası oluşturun:
-        // storePassword=<password>
-        // keyPassword=<password>
-        // keyAlias=upload
-        // storeFile=<path-to-keystore>
-        
-        // Şimdilik debug key kullanılıyor, production için release key ekleyin
         create("release") {
             // key.properties dosyasından oku
             val keystorePropertiesFile = rootProject.file("key.properties")
@@ -55,21 +45,17 @@ android {
                 storeFile = keystoreProperties.getProperty("storeFile")?.let { rootProject.file(it) }
                 storePassword = keystoreProperties.getProperty("storePassword")
             }
-            // key.properties yoksa hiçbir şey yapma, buildTypes'da debug key kullanılacak
         }
     }
 
     buildTypes {
         release {
-            // Release build için signing config
-            // key.properties varsa release key kullan, yoksa debug key kullan
             val keystorePropertiesFile = rootProject.file("key.properties")
             if (keystorePropertiesFile.exists()) {
                 signingConfig = signingConfigs.getByName("release")
             } else {
                 signingConfig = signingConfigs.getByName("debug")
             }
-            // Kod optimizasyonu
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

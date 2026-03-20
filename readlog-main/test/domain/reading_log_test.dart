@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:berber/features/reading/domain/reading_log.dart';
+import 'package:libris/features/reading/domain/reading_log.dart';
 
 void main() {
   group('ReadingLog', () {

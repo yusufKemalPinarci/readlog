@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:berber/shared/widgets/book_page_transition.dart';
+import 'package:libris/shared/widgets/book_page_transition.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

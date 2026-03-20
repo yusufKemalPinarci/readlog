@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:berber/features/books/domain/book.dart';
-import 'package:berber/features/books/data/books_repository.dart';
-import 'package:berber/features/books/application/books_vm.dart';
+import 'package:libris/features/books/domain/book.dart';
+import 'package:libris/features/books/data/books_repository.dart';
+import 'package:libris/features/books/application/books_vm.dart';
 
 void main() {
   group('BooksVm', () {

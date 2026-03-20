@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:berber/shared/widgets/confirm_dialog.dart';
-import 'package:berber/app/theme/app_theme.dart';
-import 'package:berber/app/theme/theme_color_palette.dart';
+import 'package:libris/shared/widgets/confirm_dialog.dart';
+import 'package:libris/app/theme/app_theme.dart';
+import 'package:libris/app/theme/theme_color_palette.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

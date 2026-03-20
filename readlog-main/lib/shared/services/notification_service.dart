@@ -47,8 +47,8 @@ class NotificationService {
 
   /// Bildirime tıklandığında çağrılır
   void _onNotificationTapped(NotificationResponse response) {
-    // Bildirime tıklandığında yapılacak işlemler
-    // (ileride navigation eklenebilir)
+    // Bildirim tıklaması uygulama açıkken veya arka plandayken tetiklenir.
+    // Uygulama otomatik olarak ön plana gelir.
   }
 
   /// Günlük okuma hatırlatıcısı ayarla
@@ -75,29 +75,6 @@ class NotificationService {
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time,
-    );
-  }
-
-  /// 10 saniye sonra test bildirimi gönder
-  Future<void> scheduleTestNotification() async {
-    // 10 saniye bekle
-    await Future.delayed(const Duration(seconds: 10));
-    
-    // Bildirimi göster
-    await _notifications.show(
-      999,
-      'Okuma Vakti!',
-      'Uygulamadan ayrıldın ama okumayı unutma! 📚',
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'test_channel',
-          'Test Bildirimleri',
-          channelDescription: 'Test amaçlı bildirimler',
-          importance: Importance.max,
-          priority: Priority.high,
-        ),
-        iOS: DarwinNotificationDetails(),
-      ),
     );
   }
 

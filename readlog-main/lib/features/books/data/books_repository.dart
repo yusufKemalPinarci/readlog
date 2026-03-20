@@ -41,30 +41,27 @@ class InMemoryBooksRepository implements BooksRepository {
 }
 
 class LocalBooksRepository implements BooksRepository {
-  LocalBooksRepository(this._storage, {List<Book>? seed}) {
-    _init(seed);
+  LocalBooksRepository(this._storage) {
+    _init();
   }
 
   final LocalStorageService _storage;
   List<Book> _items = [];
 
-  void _init(List<Book>? seed) {
-    _reload(seed);
+  void _init() {
+    _reload();
   }
 
-  void _reload(List<Book>? seed) {
+  void _reload() {
     final storedData = _storage.loadBooks();
     if (storedData.isNotEmpty) {
       _items = storedData.map((json) => Book.fromJson(json)).toList();
-    } else if (seed != null) {
-      _items = [...seed];
-      _save();
     }
   }
 
   /// Verileri storage'dan yeniden yükle (import sonrası kullanılır)
   Future<void> reload() async {
-    _reload(null);
+    _reload();
   }
 
   Future<void> _save() async {

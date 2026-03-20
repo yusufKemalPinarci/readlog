@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:berber/app/theme/theme_color_palette.dart';
+import 'package:libris/app/theme/theme_color_palette.dart';
 
 void main() {
   group('ColorPalette', () {

@@ -86,7 +86,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     children: [
                       Expanded(
                         child: GestureDetector(
-                          onTap: () => context.go(Routes.login),
+                          onTap: () => context.go(Routes.home),
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
