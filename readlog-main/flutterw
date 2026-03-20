@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Flutter SDK kökü. İstersen override edebilirsin:
+#   export FLUTTER_HOME="/c/Users/<kullanici>/flutter"
+# veya Windows path ile:
+#   export FLUTTER_HOME_WIN="C:\Users\<kullanici>\flutter"
+#
+# Not: Aşağıda bazı yaygın konumları otomatik deniyoruz.
+FLUTTER_HOME="${FLUTTER_HOME:-}"
+FLUTTER_HOME_WIN="${FLUTTER_HOME_WIN:-}"
+
+detect_flutter_bat() {
+  local candidate=""
+
+  # 1) Bilinen / verilen konumları dene
+  local homes=()
+  local homes_win=()
+
+  [[ -n "${FLUTTER_HOME}" ]] && homes+=("${FLUTTER_HOME}")
+  [[ -n "${FLUTTER_HOME_WIN}" ]] && homes_win+=("${FLUTTER_HOME_WIN}")
+
+  # set -u yüzünden bazı ortamlarda USER/USERNAME unset olabilir.
+  # Mümkün olduğunca güvenli şekilde kullanıcı adını tahmin edelim.
+  local uname=""
+  uname="${USER-}"
+  [[ -z "${uname}" ]] && uname="${USERNAME-}"
+  if [[ -z "${uname}" ]]; then
+    uname="$(id -un 2>/dev/null || true)"
+  fi
+
+  # Yaygın MSYS yolları
+  if [[ -n "${uname}" ]]; then
+    homes+=("/c/Users/${uname}/flutter")
+  fi
+  homes+=("/c/src/flutter" "/c/flutter" "/c/flutter/src/flutter")
+
+  # Yaygın Windows yolları
+  if [[ -n "${uname}" ]]; then
+    homes_win+=("C:\\Users\\${uname}\\flutter")
+  fi
+  homes_win+=("C:\\src\\flutter" "C:\\flutter" "C:\\flutter\\src\\flutter")
+
+  # 1a) MSYS yollarını kontrol et
+  for h in "${homes[@]}"; do
+    for rel in "bin/flutter.bat" "src/flutter/bin/flutter.bat"; do
+      candidate="${h}/${rel}"
+      if [[ -f "${candidate}" ]]; then
+        echo "${candidate}"
+        return 0
+      fi
+    done
+  done
+
+  # 1b) Windows yollarını kontrol et (cmd if exist) -> MSYS'e çevir
+  for hw in "${homes_win[@]}"; do
+    for relw in "bin\\flutter.bat" "src\\flutter\\bin\\flutter.bat"; do
+      # Not: Git Bash/MSYS bazı /c gibi argümanları path'e çevirir. //c kullanıyoruz.
+      if /c/Windows/System32/cmd.exe //c "if exist \"${hw}\\${relw}\" (exit 0) else (exit 1)" >/dev/null 2>&1; then
+        local msys_home
+        msys_home="$(cygpath -u "${hw}")"
+        candidate="${msys_home}/$(echo "${relw}" | tr '\\\\' '/')"
+        if [[ -f "${candidate}" ]]; then
+          echo "${candidate}"
+          return 0
+        fi
+      fi
+    done
+  done
+
+  # 3) where.exe ile bul (PATH üzerinden) -> MSYS'e çevir
+  local where_out
+  where_out="$(/c/Windows/System32/where.exe flutter 2>/dev/null | head -n 1 || true)"
+  if [[ -n "${where_out}" ]]; then
+    candidate="$(cygpath -u "${where_out}")"
+    if [[ -f "${candidate}" ]]; then
+      echo "${candidate}"
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
+FLUTTER_BAT="$(detect_flutter_bat || true)"
+if [[ -z "${FLUTTER_BAT}" ]]; then
+  echo "Flutter bulunamadı." >&2
+  echo "Denendi:" >&2
+  echo "  - (örnek) /c/Users/<kullanici>/flutter/bin/flutter.bat" >&2
+  echo "  - (örnek) C:\\Users\\<kullanici>\\flutter\\bin\\flutter.bat" >&2
+  echo "Çözüm: FLUTTER_HOME veya FLUTTER_HOME_WIN ayarla." >&2
+  echo 'Örnek (Git Bash): export FLUTTER_HOME="/c/flutter/src/flutter"' >&2
+  echo 'Örnek (Windows): export FLUTTER_HOME_WIN="C:\flutter\src\flutter"' >&2
+  exit 1
+fi
+
+# Flutter bazı durumlarda Windows tarafında git.exe arıyor.
+# Git Bash'te /mingw64/bin/git görünse bile, Flutter/Dart tarafı bunu bulamayabiliyor.
+# Bu yüzden Windows Git yollarını PATH'e ekliyoruz.
+# Not: Git Bash'in PATH formatı (:) Windows süreçlerinde her zaman doğru çözülmüyor.
+# En stabil yöntem: cmd.exe içinde Windows tarzı PATH (;) ile çalıştırmak.
+
+WIN_FLUTTER_BAT="$(cygpath -w "${FLUTTER_BAT}")"
+
+cmd_args=()
+for a in "$@"; do
+  if [[ "${a}" == *" "* ]]; then
+    cmd_args+=("\"${a}\"")
+  else
+    cmd_args+=("${a}")
+  fi
+done
+
+# Flutter Windows'ta pwsh.exe veya PowerShell.exe çağırıyor.
+# Kurumsal imajlarda PowerShell.exe grup ilkesiyle engellenebiliyor.
+# Bu yüzden, kullanıcı altına indirilen taşınabilir pwsh.exe yolunu da PATH'e ekliyoruz.
+# Ayrıca Git'i de Windows tarzı PATH'e ekliyoruz.
+# Not: cmd.exe içinde \" gibi kaçışlar sorun çıkarabildiği için mümkün olduğunca quotesuz gidiyoruz.
+PWSH7_HOME_WIN="C:\\Users\\yusuf.pinarci\\tools\\pwsh7"
+CMDLINE="set PATH=C:\\Windows\\System32;C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\;${PWSH7_HOME_WIN};C:\\PROGRA~1\\Git\\cmd;C:\\PROGRA~1\\Git\\bin;%PATH% && call ${WIN_FLUTTER_BAT} ${cmd_args[*]-}"
+# Not: /c,/d,/s parametreleri MSYS tarafından path'e çevrilebilir. // formu kullanıyoruz.
+exec /c/Windows/System32/cmd.exe //d //s //c "${CMDLINE}"
+
+
