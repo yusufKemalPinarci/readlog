@@ -79,7 +79,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Single
       body: SafeArea(
         child: Column(
           children: [
-            Expanded(
+            Flexible(
               child: PageView.builder(
                 controller: _pageController,
                 itemCount: _pages.length,

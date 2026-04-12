@@ -100,26 +100,32 @@ class _ActiveReadingScreenState extends ConsumerState<ActiveReadingScreen> with 
           elevation: 0,
         ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            children: [
-              const Spacer(flex: 2),
-              _TimerDisplay(
-                elapsed: state.elapsed,
-                status: state.status,
-                mode: state.mode,
-                recordingDuration: state.recordingDuration,
-              ),
-              const SizedBox(height: 32),
-              _StatusIndicator(
-                status: state.status,
-                mode: state.mode,
-              ),
-              const Spacer(flex: 3),
-              _QuoteText(mode: state.mode),
-              const Spacer(flex: 2),
-              _ActionButtons(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 24),
+                      _TimerDisplay(
+                        elapsed: state.elapsed,
+                        status: state.status,
+                        mode: state.mode,
+                        recordingDuration: state.recordingDuration,
+                      ),
+                      const SizedBox(height: 24),
+                      _StatusIndicator(
+                        status: state.status,
+                        mode: state.mode,
+                      ),
+                      const SizedBox(height: 32),
+                      _QuoteText(mode: state.mode),
+                      const SizedBox(height: 32),
+                      _ActionButtons(
                 state: state,
                 onStartSilent: vm.startSilent,
                 onStartVoice: () async {
@@ -162,9 +168,13 @@ class _ActiveReadingScreenState extends ConsumerState<ActiveReadingScreen> with 
                   }
                 },
               ),
-              const SizedBox(height: 32),
-            ],
-          ),
+                      const SizedBox(height: 32),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
       ),
