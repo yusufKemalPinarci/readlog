@@ -29,7 +29,7 @@ Cihazınızda yerel olarak saklanan veriler:
 
 Libris aşağıdaki üçüncü taraf hizmetlerini kullanır:
 
-- **OpenLibrary API** (openlibrary.org): Kitap arama özelliğinde kullanılır. Yalnızca arama sorgusu (kitap adı) gönderilir. Kişisel veri paylaşılmaz.
+- **Open Library API** (openlibrary.org): Kitap arama özelliğinde kullanılır. Yalnızca arama sorgusu (kitap adı) gönderilir. Kişisel veri paylaşılmaz.
 - **Google Fonts**: Uygulama yazı tipleri için kullanılır. Google'ın Fonts API gizlilik politikası geçerlidir.
 
 Bu hizmetler dışında hiçbir üçüncü taraf ile veri paylaşımı yapılmaz.
@@ -43,7 +43,7 @@ Uygulama aşağıdaki cihaz izinlerini kullanır:
 | Kamera | Kitap kapağı fotoğrafı çekmek |
 | Mikrofon | Okuma oturumlarında sesli kayıt yapmak |
 | Depolama | Kitap kapakları, ses kayıtları ve notları cihazda saklamak |
-| İnternet | Kitap arama (OpenLibrary) ve yazı tipleri (Google Fonts) |
+| İnternet | Kitap arama (Open Library) ve yazı tipleri (Google Fonts) |
 
 ### 5. Veri Güvenliği
 
@@ -88,7 +88,7 @@ Data stored locally on your device:
 
 Libris uses the following third-party services:
 
-- **OpenLibrary API** (openlibrary.org): Used for book search. Only search queries (book title) are sent. No personal data is shared.
+- **Open Library API** (openlibrary.org): Used for book search. Only search queries (book title) are sent. No personal data is shared.
 - **Google Fonts**: Used for application fonts. Google's Fonts API privacy policy applies.
 
 No data is shared with any third party beyond these services.
@@ -102,7 +102,7 @@ The application uses the following device permissions:
 | Camera | Taking book cover photos |
 | Microphone | Voice recording during reading sessions |
 | Storage | Storing book covers, audio recordings, and notes on device |
-| Internet | Book search (OpenLibrary) and fonts (Google Fonts) |
+| Internet | Book search (Open Library) and fonts (Google Fonts) |
 
 ### 5. Data Security
 

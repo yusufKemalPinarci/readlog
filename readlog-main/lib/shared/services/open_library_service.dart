@@ -9,7 +9,7 @@ class OpenLibraryBook {
   final String? description;
   final String? isbn;
   final String? publishDate;
-  final String? editionKey;
+  final String? editionKey; // Open Library work key
 
   OpenLibraryBook({
     required this.title,
@@ -22,55 +22,71 @@ class OpenLibraryBook {
     this.editionKey,
   });
 
-  factory OpenLibraryBook.fromJson(Map<String, dynamic> json) {
+  /// Yüksek kaliteli kapak resmi URL'i (indirme/kaydetme için)
+  String? get highResCoverUrl {
+    if (coverImageUrl == null) return null;
+    // Open Library kapak URL'ini küçükten büyüğe yükselt: -M.jpg → -L.jpg
+    return coverImageUrl!
+        .replaceAll('-M.jpg', '-L.jpg')
+        .replaceAll('-S.jpg', '-L.jpg');
+  }
+
+  factory OpenLibraryBook.fromOpenLibraryJson(Map<String, dynamic> json) {
     // Yazar bilgisini al
     String? author;
-    if (json['author_name'] != null && json['author_name'] is List) {
-      final authors = json['author_name'] as List;
-      if (authors.isNotEmpty) {
-        author = authors[0].toString();
-      }
+    final authors = json['author_name'] as List<dynamic>?;
+    if (authors != null && authors.isNotEmpty) {
+      author = authors[0].toString();
     }
 
-    // Sayfa sayısını al
+    // Sayfa sayısını al (medyan değer - çok daha güvenilir)
     int? pageCount;
-    if (json['number_of_pages_median'] != null) {
-      pageCount = json['number_of_pages_median'] as int?;
-    } else if (json['number_of_pages'] != null) {
-      pageCount = json['number_of_pages'] as int?;
-    }
-
-    // Kapak resmi URL'ini al
-    String? coverImageUrl;
-    if (json['cover_i'] != null) {
-      coverImageUrl = 'https://covers.openlibrary.org/b/id/${json['cover_i']}-L.jpg';
-    } else if (json['isbn'] != null && json['isbn'] is List && (json['isbn'] as List).isNotEmpty) {
-      final isbn = (json['isbn'] as List).first.toString();
-      coverImageUrl = 'https://covers.openlibrary.org/b/isbn/$isbn-L.jpg';
-    }
-
-    // Edition key'i al (sayfa sayısı yoksa detay çekmek için)
-    String? editionKey;
-    if (json['edition_key'] != null && json['edition_key'] is List) {
-      final editions = json['edition_key'] as List;
-      if (editions.isNotEmpty) {
-        editionKey = editions.first.toString();
+    final pages = json['number_of_pages_median'];
+    if (pages != null) {
+      if (pages is int && pages > 0) {
+        pageCount = pages;
+      } else if (pages is double && pages > 0) {
+        pageCount = pages.toInt();
       }
     }
+
+    // ISBN bilgisini al (13 haneli tercih edilir)
+    String? isbn;
+    final isbns = json['isbn'] as List<dynamic>?;
+    if (isbns != null && isbns.isNotEmpty) {
+      for (final i in isbns) {
+        if (i.toString().length == 13) {
+          isbn = i.toString();
+          break;
+        }
+      }
+      isbn ??= isbns.first.toString();
+    }
+
+    // Kapak resmi URL'ini al - sadece cover_i varsa (garantili fotoğraf)
+    String? coverImageUrl;
+    final coverId = json['cover_i'];
+    if (coverId != null) {
+      coverImageUrl = 'https://covers.openlibrary.org/b/id/$coverId-M.jpg';
+    }
+
+    // Open Library work key'ini al
+    final workKey = (json['key'] as String?)?.replaceFirst('/works/', '');
+
+    // Yayın yılı
+    String? publishDate;
+    final year = json['first_publish_year'];
+    if (year != null) publishDate = year.toString();
 
     return OpenLibraryBook(
       title: (json['title'] as String?) ?? '',
       author: author,
       pageCount: pageCount,
       coverImageUrl: coverImageUrl,
-      description: json['first_sentence'] != null && json['first_sentence'] is List
-          ? (json['first_sentence'] as List).first.toString()
-          : null,
-      isbn: json['isbn'] != null && json['isbn'] is List && (json['isbn'] as List).isNotEmpty
-          ? (json['isbn'] as List).first.toString()
-          : null,
-      publishDate: json['first_publish_year']?.toString(),
-      editionKey: editionKey,
+      description: null,
+      isbn: isbn,
+      publishDate: publishDate,
+      editionKey: workKey,
     );
   }
 }
@@ -78,7 +94,7 @@ class OpenLibraryBook {
 class OpenLibraryService {
   static const String _baseUrl = 'https://openlibrary.org';
 
-  /// Kitap ara
+  /// Kitap ara (Open Library Search API - API key gerektirmez)
   Future<List<OpenLibraryBook>> searchBooks(String query) async {
     if (query.trim().isEmpty) {
       return [];
@@ -86,10 +102,16 @@ class OpenLibraryService {
 
     try {
       final encodedQuery = Uri.encodeComponent(query.trim());
-      final url = Uri.parse('$_baseUrl/search.json?q=$encodedQuery&limit=20');
-      
-      final response = await http.get(url).timeout(
-        const Duration(seconds: 10),
+      final url = Uri.parse(
+        '$_baseUrl/search.json?q=$encodedQuery&limit=20'
+        '&fields=key,title,author_name,number_of_pages_median,isbn,cover_i,first_publish_year',
+      );
+
+      final response = await http.get(
+        url,
+        headers: {'Accept': 'application/json'},
+      ).timeout(
+        const Duration(seconds: 15),
         onTimeout: () {
           throw Exception('İstek zaman aşımına uğradı');
         },
@@ -98,13 +120,13 @@ class OpenLibraryService {
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body) as Map<String, dynamic>;
         final docs = jsonData['docs'] as List<dynamic>?;
-        
+
         if (docs == null || docs.isEmpty) {
           return [];
         }
 
         return docs
-            .map((doc) => OpenLibraryBook.fromJson(doc as Map<String, dynamic>))
+            .map((doc) => OpenLibraryBook.fromOpenLibraryJson(doc as Map<String, dynamic>))
             .where((book) => book.title.isNotEmpty)
             .toList();
       } else {
@@ -115,27 +137,9 @@ class OpenLibraryService {
     }
   }
 
-  /// Edition key ile sayfa sayısını çek
-  Future<int?> fetchPageCount(String editionKey) async {
-    try {
-      final url = Uri.parse('$_baseUrl/books/$editionKey.json');
-      final response = await http.get(url).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          throw Exception('İstek zaman aşımına uğradı');
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body) as Map<String, dynamic>;
-        if (jsonData['number_of_pages'] != null) {
-          return jsonData['number_of_pages'] as int?;
-        }
-      }
-      return null;
-    } catch (_) {
-      return null;
-    }
+  /// Sayfa sayısını çek - artık arama sonuçlarında geliyor, uyumluluk için korundu
+  Future<int?> fetchPageCount(String workKey) async {
+    return null;
   }
 }
 

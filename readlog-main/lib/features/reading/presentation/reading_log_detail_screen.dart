@@ -85,6 +85,7 @@ Widget _buildContent(BuildContext context, WidgetRef ref, ReadingLog log, Book b
               final shouldRefresh = await context.push<bool>(Routes.editReadingLog(logId));
               if (shouldRefresh == true) {
                 ref.invalidate(readingLogProvider(logId));
+                ref.read(readingLogsProvider.notifier).reload();
               }
             },
           ),
@@ -166,15 +167,17 @@ Widget _buildContent(BuildContext context, WidgetRef ref, ReadingLog log, Book b
                                   // Tam ekranda resmi göster
                                   showDialog(
                                     context: context,
+                                    barrierColor: Colors.black87,
                                     builder: (context) => Dialog(
-                                      backgroundColor: Colors.transparent,
+                                      backgroundColor: Colors.black,
                                       insetPadding: EdgeInsets.zero,
                                       child: Stack(
+                                        fit: StackFit.expand,
                                         children: [
-                                          Center(
-                                            child: InteractiveViewer(
-                                              minScale: 0.5,
-                                              maxScale: 4.0,
+                                          InteractiveViewer(
+                                            minScale: 0.5,
+                                            maxScale: 4.0,
+                                            child: Center(
                                               child: Image.file(
                                                 File(log.noteFilePath!),
                                                 fit: BoxFit.contain,
@@ -183,12 +186,12 @@ Widget _buildContent(BuildContext context, WidgetRef ref, ReadingLog log, Book b
                                           ),
                                           Positioned(
                                             top: 40,
-                                            right: 20,
+                                            right: 16,
                                             child: IconButton(
                                               onPressed: () => Navigator.of(context).pop(),
-                                              icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                                              icon: const Icon(Icons.close, color: Colors.white, size: 28),
                                               style: IconButton.styleFrom(
-                                                backgroundColor: Colors.black.withValues(alpha: 0.5),
+                                                backgroundColor: Colors.black54,
                                               ),
                                             ),
                                           ),
@@ -197,23 +200,71 @@ Widget _buildContent(BuildContext context, WidgetRef ref, ReadingLog log, Book b
                                     ),
                                   );
                                 },
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: Image.file(
-                                    File(log.noteFilePath!),
-                                    width: double.infinity,
-                                    fit: BoxFit.contain,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return const SizedBox.shrink();
-                                    },
-                                  ),
+                                child: Stack(
+                                  alignment: Alignment.bottomRight,
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: ConstrainedBox(
+                                        constraints: const BoxConstraints(
+                                          maxHeight: 300,
+                                        ),
+                                        child: Image.file(
+                                          File(log.noteFilePath!),
+                                          width: double.infinity,
+                                          fit: BoxFit.contain,
+                                          errorBuilder: (context, error, stackTrace) {
+                                            return Container(
+                                              height: 120,
+                                              width: double.infinity,
+                                              decoration: BoxDecoration(
+                                                color: Colors.grey[200],
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                              child: const Column(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  Icon(Icons.broken_image_outlined, color: Colors.grey, size: 32),
+                                                  SizedBox(height: 4),
+                                                  Text('Görsel yüklenemedi', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                                                ],
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Icon(
+                                        Icons.zoom_in,
+                                        color: Colors.white.withValues(alpha: 0.7),
+                                        size: 20,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               );
                             }
                           } catch (e) {
                             // Dosya erişim hatası
                           }
-                          return const SizedBox.shrink();
+                          return Container(
+                            height: 120,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.broken_image_outlined, color: Colors.grey, size: 32),
+                                SizedBox(height: 4),
+                                Text('Görsel bulunamadı', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                              ],
+                            ),
+                          );
                         },
                       ),
                       if (log.note != null && log.note!.isNotEmpty)
@@ -228,36 +279,13 @@ Widget _buildContent(BuildContext context, WidgetRef ref, ReadingLog log, Book b
                           color: Theme.of(context).textTheme.bodyLarge?.color,
                         ),
                       )
-                    else
-                      Builder(
-                        builder: (context) {
-                          if (log.noteFilePath == null || log.noteFilePath!.isEmpty) {
-                            try {
-                              if (log.noteFilePath != null && 
-                                  log.noteFilePath!.isNotEmpty && 
-                                  !File(log.noteFilePath!).existsSync()) {
-                                return Text(
-                                  'Not eklenmemiş.',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    height: 1.6,
-                                    color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
-                                  ),
-                                );
-                              }
-                            } catch (e) {
-                              // Dosya erişim hatası
-                            }
-                            return Text(
-                              'Not eklenmemiş.',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey[600],
-                              ),
-                            );
-                          }
-                          return const SizedBox.shrink();
-                        },
+                    else if (log.noteFilePath == null || log.noteFilePath!.isEmpty)
+                      Text(
+                        'Not eklenmemiş.',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                        ),
                       ),
                   ],
                 ),
@@ -312,6 +340,7 @@ Future<void> _handleDelete(BuildContext context, WidgetRef ref, String logId) as
     
     // Provider'ları invalidate et
     ref.invalidate(readingLogProvider(logId));
+    ref.read(readingLogsProvider.notifier).reload();
     if (bookId != null) {
       // Okuma kayıtlarım ekranını güncelle - tüm bookId'ler için invalidate et
       // FutureProvider.autoDispose olduğu için sayfa tekrar açıldığında otomatik yenilenecek

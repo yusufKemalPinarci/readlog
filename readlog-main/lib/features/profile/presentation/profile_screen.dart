@@ -54,15 +54,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         // O periyottaki en yüksek sayfa (son ulaşılan sayfa)
         final maxPage = bookLogs.map((l) => l.pageAtEnd).reduce((a, b) => a > b ? a : b);
         // O periyottan önceki en yüksek sayfayı bul (başlangıç noktası)
+        final earliestDate = bookLogs.map((l) => l.date).reduce((a, b) => a.isBefore(b) ? a : b);
         final beforeLogs = allLogs.where((l) =>
           l.bookId == bookId &&
           !filteredLogs.contains(l) &&
-          l.date.isBefore(bookLogs.first.date),
+          l.date.isBefore(earliestDate),
         ).toList();
-        final startPage = beforeLogs.isEmpty
+        var startPage = beforeLogs.isEmpty
             ? 0
             : beforeLogs.map((l) => l.pageAtEnd).reduce((a, b) => a > b ? a : b);
-        totalPagesRead += (maxPage - startPage).clamp(0, maxPage);
+        // Kitap yeniden okunmuşsa (önceki okumanın sayfası şimdikinden büyük),
+        // sıfırdan başlamış demektir
+        if (startPage > maxPage) startPage = 0;
+        totalPagesRead += maxPage - startPage;
       }
     }
 
@@ -146,12 +150,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           child: CircleAvatar(
                             radius: 48,
                             backgroundColor: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5),
-                            backgroundImage: profile.avatarImagePath != null
-                                ? FileImage(File(profile.avatarImagePath!))
-                                : null,
-                            child: profile.avatarImagePath == null
-                                ? Icon(Icons.person_rounded, size: 44, color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5))
-                                : null,
+                            child: profile.avatarImagePath != null
+                                ? ClipOval(
+                                    child: Image.file(
+                                      File(profile.avatarImagePath!),
+                                      width: 96,
+                                      height: 96,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) {
+                                        return Icon(Icons.person_rounded, size: 44, color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5));
+                                      },
+                                    ),
+                                  )
+                                : Icon(Icons.person_rounded, size: 44, color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)),
                           ),
                         ),
                         const SizedBox(height: 14),

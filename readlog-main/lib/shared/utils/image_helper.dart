@@ -16,7 +16,7 @@ class ImageHelper {
             toolbarTitle: 'Kırp',
             toolbarColor: Theme.of(context).colorScheme.primary,
             toolbarWidgetColor: Colors.white,
-            initAspectRatio: aspectRatio != null ? CropAspectRatioPreset.original : CropAspectRatioPreset.square,
+            initAspectRatio: aspectRatio != null ? CropAspectRatioPreset.square : CropAspectRatioPreset.original,
             lockAspectRatio: lockAspectRatio,
             hideBottomControls: false,
           ),

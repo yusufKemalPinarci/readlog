@@ -400,60 +400,115 @@ class _EditReadingLogScreenState extends ConsumerState<EditReadingLogScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const SizedBox(height: 16),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: Stack(
-                              children: [
-                                Image.file(
-                                  File(_imagePath!),
-                                  width: double.infinity,
-                                  height: 300,
-                                  fit: BoxFit.contain,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return const SizedBox.shrink();
-                                  },
-                                ),
-                                Positioned(
-                                  top: 8,
-                                  right: 8,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: Colors.red,
-                                      shape: BoxShape.circle,
+                          Stack(
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) => Dialog(
+                                      backgroundColor: Colors.black,
+                                      insetPadding: EdgeInsets.zero,
+                                      child: Stack(
+                                        fit: StackFit.expand,
+                                        children: [
+                                          InteractiveViewer(
+                                            minScale: 0.5,
+                                            maxScale: 4.0,
+                                            child: Center(
+                                              child: Image.file(
+                                                File(_imagePath!),
+                                                fit: BoxFit.contain,
+                                              ),
+                                            ),
+                                          ),
+                                          Positioned(
+                                            top: 40,
+                                            right: 16,
+                                            child: IconButton(
+                                              onPressed: () => Navigator.of(context).pop(),
+                                              icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                                              style: IconButton.styleFrom(
+                                                backgroundColor: Colors.black54,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                    child: IconButton(
-                                      onPressed: () {
-                                        showDialog(
-                                          context: context,
-                                          builder: (context) => AlertDialog(
-                                            title: const Text('Resmi Sil?'),
-                                            content: const Text('Bu resmi silmek istediğinize emin misiniz?'),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () => Navigator.of(context).pop(),
-                                                child: const Text('İptal'),
-                                              ),
-                                              FilledButton(
-                                                onPressed: () {
-                                                  Navigator.of(context).pop();
-                                                  _removeImage();
-                                                },
-                                                style: FilledButton.styleFrom(
-                                                  backgroundColor: Colors.red,
-                                                ),
-                                                child: const Text('Sil'),
-                                              ),
+                                  );
+                                },
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: ConstrainedBox(
+                                    constraints: const BoxConstraints(
+                                      maxHeight: 300,
+                                    ),
+                                    child: Image.file(
+                                      File(_imagePath!),
+                                      width: double.infinity,
+                                      fit: BoxFit.contain,
+                                      errorBuilder: (context, error, stackTrace) {
+                                        return Container(
+                                          height: 120,
+                                          width: double.infinity,
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey[200],
+                                            borderRadius: BorderRadius.circular(16),
+                                          ),
+                                          child: const Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Icon(Icons.broken_image_outlined, color: Colors.grey, size: 32),
+                                              SizedBox(height: 4),
+                                              Text('Görsel yüklenemedi', style: TextStyle(color: Colors.grey, fontSize: 12)),
                                             ],
                                           ),
                                         );
                                       },
-                                      icon: const Icon(Icons.delete, color: Colors.white),
-                                      tooltip: 'Resmi Sil',
                                     ),
                                   ),
                                 ),
-                              ],
-                            ),
+                              ),
+                              Positioned(
+                                top: 8,
+                                right: 8,
+                                child: IconButton(
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Resmi Sil?'),
+                                        content: const Text('Bu resmi silmek istediğinize emin misiniz?'),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(),
+                                            child: const Text('İptal'),
+                                          ),
+                                          FilledButton(
+                                            onPressed: () {
+                                              Navigator.of(context).pop();
+                                              _removeImage();
+                                            },
+                                            style: FilledButton.styleFrom(
+                                              backgroundColor: Colors.red,
+                                            ),
+                                            child: const Text('Sil'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.delete_outline, color: Colors.white, size: 20),
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: Colors.black54,
+                                    padding: const EdgeInsets.all(6),
+                                    minimumSize: const Size(32, 32),
+                                  ),
+                                  tooltip: 'Resmi Sil',
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       );

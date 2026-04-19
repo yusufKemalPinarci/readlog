@@ -101,12 +101,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       data: (profile) => CircleAvatar(
                         radius: 18,
                         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                        backgroundImage: profile.avatarImagePath != null
-                            ? FileImage(File(profile.avatarImagePath!))
-                            : null,
-                        child: profile.avatarImagePath == null
-                            ? Icon(Icons.person_rounded, size: 20, color: Theme.of(context).colorScheme.primary)
-                            : null,
+                        child: profile.avatarImagePath != null
+                            ? ClipOval(
+                                child: Image.file(
+                                  File(profile.avatarImagePath!),
+                                  width: 36,
+                                  height: 36,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Icon(Icons.person_rounded, size: 20, color: Theme.of(context).colorScheme.primary);
+                                  },
+                                ),
+                              )
+                            : Icon(Icons.person_rounded, size: 20, color: Theme.of(context).colorScheme.primary),
                       ),
                       loading: () => CircleAvatar(
                         radius: 18,

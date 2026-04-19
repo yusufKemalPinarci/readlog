@@ -716,20 +716,44 @@ class _ReviewStepState extends State<_ReviewStep> {
                         children: [
                           ClipRRect(
                             borderRadius: BorderRadius.circular(12),
-                            child: Image.file(
-                              File(_imagePath!),
-                              height: 200,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(
+                                maxHeight: 250,
+                              ),
+                              child: Image.file(
+                                File(_imagePath!),
+                                width: double.infinity,
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    height: 120,
+                                    width: double.infinity,
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[200],
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.broken_image_outlined, color: Colors.grey, size: 32),
+                                        SizedBox(height: 4),
+                                        Text('Görsel yüklenemedi', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
                             ),
                           ),
                           Positioned(
                             top: 8,
                             right: 8,
                             child: IconButton(
-                              icon: const Icon(Icons.close, color: Colors.white),
+                              icon: const Icon(Icons.close, color: Colors.white, size: 20),
                               style: IconButton.styleFrom(
                                 backgroundColor: Colors.black54,
+                                padding: const EdgeInsets.all(6),
+                                minimumSize: const Size(32, 32),
                               ),
                               onPressed: () {
                                 setState(() {
@@ -1009,11 +1033,13 @@ class _NoteEditorState extends State<_NoteEditor> {
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: Image.file(
-                        File(widget.imagePath!),
-                        height: 200, // Slightly taller for visibility
-                        width: double.infinity,
-                        fit: BoxFit.cover,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 300),
+                        child: Image.file(
+                          File(widget.imagePath!),
+                          width: double.infinity,
+                          fit: BoxFit.contain,
+                        ),
                       ),
                     ),
                     Padding(

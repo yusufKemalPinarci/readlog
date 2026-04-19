@@ -2,6 +2,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 
 final notificationServiceProvider = Provider((ref) => NotificationService());
 
@@ -17,8 +18,10 @@ class NotificationService {
   Future<void> initialize() async {
     if (_initialized) return;
 
-    // Timezone verilerini yükle
+    // Timezone verilerini yükle ve cihaz yerel saatini ayarla
     tz.initializeTimeZones();
+    final localTimezone = await FlutterTimezone.getLocalTimezone();
+    tz.setLocalLocation(tz.getLocation(localTimezone.identifier));
 
     // Android ayarları
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -58,22 +61,25 @@ class NotificationService {
     required String title,
     required String body,
   }) async {
+    const details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        'daily_reminder',
+        'Günlük Hatırlatıcı',
+        channelDescription: 'Günlük okuma hatırlatıcıları',
+        importance: Importance.high,
+        priority: Priority.high,
+      ),
+      iOS: DarwinNotificationDetails(),
+    );
+
+    // Okuma hatırlatıcısı için inexact zamanlama yeterli (exact alarm izni gerektirmez)
     await _notifications.zonedSchedule(
       0,
       title,
       body,
       _nextInstanceOfTime(hour, minute),
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'daily_reminder',
-          'Günlük Hatırlatıcı',
-          channelDescription: 'Günlük okuma hatırlatıcıları',
-          importance: Importance.high,
-          priority: Priority.high,
-        ),
-        iOS: DarwinNotificationDetails(),
-      ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      details,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }

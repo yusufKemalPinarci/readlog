@@ -169,31 +169,30 @@ class DataBackupService {
     return processed;
   }
 
-  /// ZIP veya JSON dosyasından verileri içe aktarır
-  /// [replaceExisting] true ise mevcut veriler silinir, false ise birleştirilir
-  Future<void> importData({bool replaceExisting = false}) async {
+  /// Kullanıcıdan yedek dosyası seçmesini ister.
+  /// Seçim iptal edilirse `null` döner.
+  Future<File?> pickBackupFile() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['zip', 'json'],
+      withData: false,
+    );
+
+    if (result == null || result.files.isEmpty) return null;
+
+    final filePath = result.files.single.path;
+    if (filePath == null) return null;
+
+    final file = File(filePath);
+    if (!await file.exists()) return null;
+    return file;
+  }
+
+  /// Seçilmiş dosyadan içe aktarım yapar.
+  /// [replaceExisting] true ise mevcut veriler silinir, false ise birleştirilir.
+  Future<void> importFromFile(File file, {bool replaceExisting = false}) async {
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['zip', 'json'],
-        withData: false,
-      );
-
-      if (result == null || result.files.isEmpty) {
-        throw Exception('Dosya seçilmedi');
-      }
-
-      final filePath = result.files.single.path;
-      if (filePath == null) {
-        throw Exception('Dosya yolu alınamadı');
-      }
-
-      final file = File(filePath);
-      if (!await file.exists()) {
-        throw Exception('Dosya bulunamadı');
-      }
-
-      if (filePath.toLowerCase().endsWith('.zip')) {
+      if (file.path.toLowerCase().endsWith('.zip')) {
         await _importFromZip(file, replaceExisting: replaceExisting);
       } else {
         await _importFromJson(file, replaceExisting: replaceExisting);
@@ -201,6 +200,14 @@ class DataBackupService {
     } catch (e) {
       throw Exception('İçe aktarma hatası: $e');
     }
+  }
+
+  /// ZIP veya JSON dosyasından verileri içe aktarır (eski API — geriye uyumluluk için).
+  /// [replaceExisting] true ise mevcut veriler silinir, false ise birleştirilir
+  Future<void> importData({bool replaceExisting = false}) async {
+    final file = await pickBackupFile();
+    if (file == null) return; // Kullanıcı iptal etti
+    await importFromFile(file, replaceExisting: replaceExisting);
   }
 
   /// ZIP arşivinden içe aktarım (v2 format)

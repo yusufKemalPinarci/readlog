@@ -11,10 +11,9 @@ class OnboardingScreen extends ConsumerStatefulWidget {
   ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with SingleTickerProviderStateMixin {
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
-  late AnimationController _pulseController;
 
   final List<_OnboardingPageData> _pages = [
     _OnboardingPageData(
@@ -29,9 +28,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Single
     ),
     _OnboardingPageData(
       title: 'Sesli Okuma Modu',
-      description: 'Okuma oturumunuzu sesli modda başlatın ve düşüncelerinizi anında kaydedin. Kaydı daha sonra dinleyerek tekrar gözden geçirebilirsiniz.',
+      description: 'Sesli okumanızı kaydedip sonrasında dinleyebilirsiniz.',
       icon: Icons.mic_rounded,
-      highlightColor: Colors.red,
     ),
     _OnboardingPageData(
       title: 'Notlar ve Fotoğraflar',
@@ -41,17 +39,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Single
   ];
 
   @override
-  void initState() {
-    super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat();
-  }
-
-  @override
   void dispose() {
-    _pulseController.dispose();
     _pageController.dispose();
     super.dispose();
   }
@@ -95,81 +83,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Single
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        AnimatedBuilder(
-                          animation: _pulseController,
-                          builder: (context, child) {
-                            final isHighlighted = page.highlightColor != null && _currentPage == index;
-                            final scale = isHighlighted
-                                ? 1.0 + (_pulseController.value * 0.1)
-                                : 1.0;
-                            final opacity = isHighlighted
-                                ? 0.3 + (_pulseController.value * 0.2)
-                                : 0.3;
-                            
-                            return Transform.scale(
-                              scale: scale,
-                              child: Container(
-                                padding: const EdgeInsets.all(32),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: (page.highlightColor ?? Theme.of(context).primaryColor).withValues(alpha:
-                                    isHighlighted ? opacity : 0.15,
-                                  ),
-                                  border: page.highlightColor != null
-                                      ? Border.all(
-                                          color: page.highlightColor!.withValues(alpha:
-                                            isHighlighted ? opacity + 0.2 : 0.3,
-                                          ),
-                                          width: 3,
-                                        )
-                                      : null,
-                                  boxShadow: isHighlighted
-                                      ? [
-                                          BoxShadow(
-                                            color: page.highlightColor!.withValues(alpha: 0.3),
-                                            blurRadius: 20,
-                                            spreadRadius: 5,
-                                          ),
-                                        ]
-                                      : null,
-                                ),
-                                child: Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    Icon(
-                                      page.icon,
-                                      size: 80,
-                                      color: page.highlightColor ?? Theme.of(context).primaryColor,
-                                    ),
-                                    if (page.highlightColor != null)
-                                      Positioned(
-                                        top: 0,
-                                        right: 0,
-                                        child: Container(
-                                          padding: const EdgeInsets.all(6),
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            color: page.highlightColor,
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: page.highlightColor!.withValues(alpha: 0.5),
-                                                blurRadius: 8,
-                                                spreadRadius: 2,
-                                              ),
-                                            ],
-                                          ),
-                                          child: const Icon(
-                                            Icons.fiber_new_rounded,
-                                            color: Colors.white,
-                                            size: 20,
-                                          ),
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
+                        Container(
+                          padding: const EdgeInsets.all(32),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Theme.of(context).primaryColor.withValues(alpha: 0.15),
+                          ),
+                          child: Icon(
+                            page.icon,
+                            size: 80,
+                            color: Theme.of(context).primaryColor,
+                          ),
                         ),
                         const SizedBox(height: 48),
                         Text(
@@ -177,35 +101,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Single
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: page.highlightColor,
                           ),
                         ),
                         const SizedBox(height: 16),
-                        Container(
-                          padding: page.highlightColor != null
-                              ? const EdgeInsets.symmetric(horizontal: 16, vertical: 12)
-                              : null,
-                          decoration: page.highlightColor != null
-                              ? BoxDecoration(
-                                  color: page.highlightColor!.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: page.highlightColor!.withValues(alpha: 0.3),
-                                    width: 1,
-                                  ),
-                                )
-                              : null,
-                          child: Text(
-                            page.description,
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: page.highlightColor != null
-                                  ? page.highlightColor!.withValues(alpha: 0.9)
-                                  : Colors.grey[600],
-                              fontWeight: page.highlightColor != null
-                                  ? FontWeight.w600
-                                  : FontWeight.normal,
-                            ),
+                        Text(
+                          page.description,
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: Colors.grey[600],
                           ),
                         ),
                       ],
@@ -264,12 +167,10 @@ class _OnboardingPageData {
   final String title;
   final String description;
   final IconData icon;
-  final Color? highlightColor;
 
   _OnboardingPageData({
     required this.title,
     required this.description,
     required this.icon,
-    this.highlightColor,
   });
 }

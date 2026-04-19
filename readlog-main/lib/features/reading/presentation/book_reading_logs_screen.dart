@@ -269,6 +269,8 @@ class _ContentState extends ConsumerState<_Content> {
 }
 
 final _bookLogsProvider = FutureProvider.autoDispose.family<List<ReadingLog>, String>((ref, bookId) async {
+  // readingLogsProvider'ı izle → loglar değişince bu provider da yenilensin
+  ref.watch(readingLogsProvider);
   final repo = ref.watch(readingLogsRepositoryProvider);
   return repo.listByBookId(bookId);
 });

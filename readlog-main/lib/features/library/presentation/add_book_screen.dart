@@ -139,10 +139,11 @@ class _AddBookScreenState extends ConsumerState<AddBookScreen> {
       pagesCtrl.text = '';
     }
 
-    // Kapak resmini indir ve kaydet
-    if (book.coverImageUrl != null) {
+    // Kapak resmini indir ve kaydet (yüksek kaliteli URL kullan)
+    final downloadUrl = book.highResCoverUrl ?? book.coverImageUrl;
+    if (downloadUrl != null) {
       try {
-        final response = await http.get(Uri.parse(book.coverImageUrl!));
+        final response = await http.get(Uri.parse(downloadUrl));
         if (response.statusCode == 200) {
           final appDir = await getApplicationDocumentsDirectory();
           final imagesDir = Directory('${appDir.path}/book_covers');
@@ -567,6 +568,24 @@ class _AddBookScreenState extends ConsumerState<AddBookScreen> {
                     width: 60,
                     height: 90,
                     fit: BoxFit.cover,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Container(
+                        width: 60,
+                        height: 90,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                      );
+                    },
                     errorBuilder: (context, error, stackTrace) {
                       return Container(
                         width: 60,

@@ -47,6 +47,8 @@ class NotificationSettingsNotifier extends StateNotifier<NotificationSettings> {
       hour: prefs.getInt(_keyHour) ?? 20,
       minute: prefs.getInt(_keyMinute) ?? 0,
     );
+    // Uygulama açıldığında (yeniden başlatma sonrası dahil) bildirimi yeniden planla
+    await _updateNotificationSchedule();
   }
 
   Future<void> setEnabled(bool enabled) async {

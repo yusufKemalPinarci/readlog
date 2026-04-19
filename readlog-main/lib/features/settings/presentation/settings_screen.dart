@@ -209,7 +209,7 @@ class SettingsScreen extends ConsumerWidget {
                           builder: (context) => AlertDialog(
                             title: const Text('Yardım & Destek'),
                             content: const Text(
-                              'İletişim: libris.app@ysfkml.com\n\n'
+                              'İletişim: ysfkmlstudio@gmail.com\n\n'
                               'Sorularınız ve önerileriniz için bize ulaşabilirsiniz.',
                             ),
                             actions: [
@@ -238,7 +238,7 @@ class SettingsScreen extends ConsumerWidget {
                                 'Libris tamamen çevrimdışı çalışır.\n\n'
                                 '• Tüm verileriniz yalnızca cihazınızda saklanır.\n'
                                 '• Hiçbir kişisel veriniz sunuculara gönderilmez.\n'
-                                '• Kitap araması için yalnızca OpenLibrary API kullanılır '
+                                '• Kitap araması için yalnızca Open Library API kullanılır '
                                 '(arama sorgusu dışında veri paylaşılmaz).\n'
                                 '• Uygulamanızı sildiğinizde tüm veriler silinir.\n\n'
                                 'İzin istenen özellikler:\n'
@@ -300,7 +300,14 @@ class SettingsScreen extends ConsumerWidget {
                           title: 'Verileri İçe Aktar',
                           subtitle: 'ZIP veya JSON yedek dosyasını içe aktar',
                           onTap: () async {
-                            // Loading göster
+                            final service = ref.read(dataBackupServiceProvider);
+
+                            // 1. Önce dosya seç — dialog YOK, iptal sessiz
+                            final file = await service.pickBackupFile();
+                            if (file == null) return; // İptal edildi, sessizce çık
+
+                            // 2. Dosya seçildi, şimdi loading dialog göster
+                            if (!context.mounted) return;
                             showDialog(
                               context: context,
                               barrierDismissible: false,
@@ -310,10 +317,10 @@ class SettingsScreen extends ConsumerWidget {
                             );
 
                             try {
-                              // Varsayılan olarak merge yap (replaceExisting: false)
-                              await ref.read(dataBackupServiceProvider).importData(
-                                    replaceExisting: false,
-                                  );
+                              await service.importFromFile(
+                                file,
+                                replaceExisting: false,
+                              );
 
                               // Provider'ları yenile
                               ref.invalidate(readingLogsRepositoryProvider);
