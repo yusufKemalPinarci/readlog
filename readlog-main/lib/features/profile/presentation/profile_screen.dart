@@ -43,7 +43,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
 
     // 2. İstatistikleri filtrelenmiş loglardan hesapla
-    int totalSeconds = filteredLogs.fold<int>(0, (sum, log) => sum + log.effectiveDurationSeconds);
+    final int totalSeconds = filteredLogs.fold<int>(0, (sum, log) => sum + log.effectiveDurationSeconds);
 
     // Sayfa sayısı: Her kitap için o periyottaki en yüksek pageAtEnd'i al
     int totalPagesRead = 0;
@@ -70,7 +70,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       }
     }
 
-    String totalHours = (totalSeconds / 3600).toStringAsFixed(1);
+    final String totalHours = (totalSeconds / 3600).toStringAsFixed(1);
 
     // 3. Günlük Ortalama Hesaplama
     int pagesPerDay = 0;

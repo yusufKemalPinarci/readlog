@@ -220,12 +220,12 @@ class _FinishReadingFlowScreenState extends ConsumerState<FinishReadingFlowScree
                 // Kitap bitmiyor, kaydet ve çık
                 try {
                   final result = await vm.saveAndMarkRead();
-                  if (!mounted) return;
-                  
+                  if (!context.mounted) return;
+
                   setState(() {
                     _lastResult = result;
                   });
-                   
+
                   // T2.13: replace the stack so back-nav can't reach the stale
                   // (already-saved) ActiveReadingScreen.
                   if (result.shouldShowStreak) {
@@ -234,7 +234,7 @@ class _FinishReadingFlowScreenState extends ConsumerState<FinishReadingFlowScree
                     context.go('${Routes.home}?tab=1');
                   }
                 } catch (e) {
-                   if (mounted) {
+                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Hata: $e')),
                     );
@@ -251,12 +251,12 @@ class _FinishReadingFlowScreenState extends ConsumerState<FinishReadingFlowScree
              onSave: () async {
                try {
                   final result = await vm.saveAndMarkRead();
-                  if (!mounted) return;
-                  
+                  if (!context.mounted) return;
+
                   setState(() {
                     _lastResult = result;
                   });
-                  
+
                   if (result.isBookCompleted) {
                      _confettiController.play();
                      
@@ -287,7 +287,7 @@ class _FinishReadingFlowScreenState extends ConsumerState<FinishReadingFlowScree
                   // T2.13: replace the stack (go) instead of pop()+push() so the
                   // now-saved ActiveReadingScreen underneath can't be reached via
                   // back-nav and re-saved (duplicate logs).
-                  if (mounted) {
+                  if (context.mounted) {
                     if (result.shouldShowStreak) {
                       context.go(Routes.streak);
                     } else {
@@ -295,7 +295,7 @@ class _FinishReadingFlowScreenState extends ConsumerState<FinishReadingFlowScree
                     }
                   }
                } catch (e) {
-                  if (mounted) {
+                  if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Hata: $e')),
                     );

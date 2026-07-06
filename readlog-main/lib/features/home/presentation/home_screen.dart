@@ -343,17 +343,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       onReorder: (oldIndex, newIndex) => vm.reorderBooks(BookShelf.toRead, oldIndex, newIndex),
                       onTap: (b) => context.push(Routes.bookReadingLogs(b.id)),
                       menuBuilder: (context, book) => [
-                        PopupMenuItem(
+                        const PopupMenuItem(
                           value: _MenuAction.startReading,
-                          child: Row(children: const [Icon(Icons.play_arrow), SizedBox(width: 10), Text('Kitaba Başla')]),
+                          child: Row(children: [Icon(Icons.play_arrow), SizedBox(width: 10), Text('Kitaba Başla')]),
                         ),
-                        PopupMenuItem(
+                        const PopupMenuItem(
                           value: _MenuAction.edit,
-                          child: Row(children: const [Icon(Icons.edit_outlined), SizedBox(width: 10), Text('Düzenle')]),
+                          child: Row(children: [Icon(Icons.edit_outlined), SizedBox(width: 10), Text('Düzenle')]),
                         ),
-                        PopupMenuItem(
+                        const PopupMenuItem(
                           value: _MenuAction.delete,
-                          child: Row(children: const [Icon(Icons.delete_outline), SizedBox(width: 10), Text('Sil')]),
+                          child: Row(children: [Icon(Icons.delete_outline), SizedBox(width: 10), Text('Sil')]),
                         ),
                       ],
                       onMenuSelected: (action, book) async {
@@ -394,21 +394,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       onTap: (b) => context.push(Routes.bookReadingLogs(b.id)),
                       onContinueReading: (b) => context.push(Routes.activeReadingFor(b.id)),
                       menuBuilder: (context, book) => [
-                        PopupMenuItem(
+                        const PopupMenuItem(
                           value: _MenuAction.continueReading,
-                          child: Row(children: const [Icon(Icons.play_arrow), SizedBox(width: 10), Text('Oku')]),
+                          child: Row(children: [Icon(Icons.play_arrow), SizedBox(width: 10), Text('Oku')]),
                         ),
-                        PopupMenuItem(
+                        const PopupMenuItem(
                           value: _MenuAction.edit,
-                          child: Row(children: const [Icon(Icons.edit_outlined), SizedBox(width: 10), Text('Düzenle')]),
+                          child: Row(children: [Icon(Icons.edit_outlined), SizedBox(width: 10), Text('Düzenle')]),
                         ),
-                        PopupMenuItem(
+                        const PopupMenuItem(
                           value: _MenuAction.finish,
-                          child: Row(children: const [Icon(Icons.check_circle_outline), SizedBox(width: 10), Text('Kitabı Bitir')]),
+                          child: Row(children: [Icon(Icons.check_circle_outline), SizedBox(width: 10), Text('Kitabı Bitir')]),
                         ),
-                        PopupMenuItem(
+                        const PopupMenuItem(
                           value: _MenuAction.delete,
-                          child: Row(children: const [Icon(Icons.delete_outline), SizedBox(width: 10), Text('Sil')]),
+                          child: Row(children: [Icon(Icons.delete_outline), SizedBox(width: 10), Text('Sil')]),
                         ),
                       ],
                       onMenuSelected: (action, book) async {
@@ -449,17 +449,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       onReorder: (oldIndex, newIndex) => vm.reorderBooks(BookShelf.read, oldIndex, newIndex),
                       onTap: (b) => context.push(Routes.bookReadingLogs(b.id)),
                       menuBuilder: (context, book) => [
-                        PopupMenuItem(
+                        const PopupMenuItem(
                           value: _MenuAction.edit,
-                          child: Row(children: const [Icon(Icons.edit_outlined), SizedBox(width: 10), Text('Düzenle')]),
+                          child: Row(children: [Icon(Icons.edit_outlined), SizedBox(width: 10), Text('Düzenle')]),
                         ),
-                        PopupMenuItem(
+                        const PopupMenuItem(
                           value: _MenuAction.restart,
-                          child: Row(children: const [Icon(Icons.refresh), SizedBox(width: 10), Text('Tekrar Oku')]),
+                          child: Row(children: [Icon(Icons.refresh), SizedBox(width: 10), Text('Tekrar Oku')]),
                         ),
-                        PopupMenuItem(
+                        const PopupMenuItem(
                           value: _MenuAction.delete,
-                          child: Row(children: const [Icon(Icons.delete_outline), SizedBox(width: 10), Text('Kitabı Sil')]),
+                          child: Row(children: [Icon(Icons.delete_outline), SizedBox(width: 10), Text('Kitabı Sil')]),
                         ),
                       ],
                       onMenuSelected: (action, book) async {
@@ -801,6 +801,10 @@ class _BooksListState extends State<_BooksList> with AutomaticKeepAliveClientMix
         parent: AlwaysScrollableScrollPhysics(),
       ),
       buildDefaultDragHandles: false,
+      // reorderBooks applies the ReorderableListView downward-move adjustment
+      // itself (T1.9); onReorderItem would pre-adjust the index and double it,
+      // so we deliberately keep the raw-index onReorder callback.
+      // ignore: deprecated_member_use
       onReorder: canReorder ? widget.onReorder : (_, __) {},
       proxyDecorator: (child, index, animation) {
         return Material(
