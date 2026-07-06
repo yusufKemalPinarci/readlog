@@ -1,16 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:libris/shared/widgets/confirm_dialog.dart';
 import 'package:libris/app/theme/app_theme.dart';
 import 'package:libris/app/theme/theme_color_palette.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-
-  setUpAll(() {
-    GoogleFonts.config.allowRuntimeFetching = false;
-  });
 
   group('showConfirmDialog', () {
     Widget buildApp({required Widget child}) {
