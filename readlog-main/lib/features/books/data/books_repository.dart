@@ -7,6 +7,9 @@ abstract class BooksRepository {
   Future<List<Book>> list();
   Future<Book?> getById(String id);
   Future<void> upsert(Book book);
+
+  /// Upserts many books with a single persist (T1.9: batched reorder save).
+  Future<void> upsertAll(List<Book> books);
   Future<void> delete(String id);
 }
 
@@ -33,6 +36,18 @@ class InMemoryBooksRepository implements BooksRepository {
       _items[index] = book;
     } else {
       _items.add(book);
+    }
+  }
+
+  @override
+  Future<void> upsertAll(List<Book> books) async {
+    for (final book in books) {
+      final index = _items.indexWhere((b) => b.id == book.id);
+      if (index >= 0) {
+        _items[index] = book;
+      } else {
+        _items.add(book);
+      }
     }
   }
 
@@ -121,6 +136,19 @@ class LocalBooksRepository implements BooksRepository {
       _items.add(book);
     }
     await _save();
+  }
+
+  @override
+  Future<void> upsertAll(List<Book> books) async {
+    for (final book in books) {
+      final index = _items.indexWhere((b) => b.id == book.id);
+      if (index >= 0) {
+        _items[index] = book;
+      } else {
+        _items.add(book);
+      }
+    }
+    await _save(); // single persist for the whole batch
   }
 
   @override

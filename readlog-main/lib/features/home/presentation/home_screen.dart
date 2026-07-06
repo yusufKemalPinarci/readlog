@@ -808,7 +808,13 @@ class _BooksListState extends State<_BooksList> with AutomaticKeepAliveClientMix
       );
     }
 
-    // List view (original)
+    // List view (original).
+    // T1.9: reorderBooks operates on the unfiltered, order-sorted shelf list, so
+    // dragging is only coherent in manual sort with no active search. Disable the
+    // built-in long-press handles and expose an explicit handle only in that mode
+    // (see _buildBookCard) — otherwise displayed indices wouldn't map back.
+    final canReorder =
+        widget.sortOption == SortOption.manual && widget.searchQuery.isEmpty;
     return ReorderableListView(
       padding: const EdgeInsets.only(
         left: 20,
@@ -819,7 +825,8 @@ class _BooksListState extends State<_BooksList> with AutomaticKeepAliveClientMix
       physics: const BouncingScrollPhysics(
         parent: AlwaysScrollableScrollPhysics(),
       ),
-      onReorder: widget.onReorder,
+      buildDefaultDragHandles: false,
+      onReorder: canReorder ? widget.onReorder : (_, __) {},
       proxyDecorator: (child, index, animation) {
         return Material(
           elevation: 8,
@@ -872,8 +879,8 @@ class _BooksListState extends State<_BooksList> with AutomaticKeepAliveClientMix
                 padding: const EdgeInsets.all(14),
                 child: Row(
                   children: [
-                    // Drag Handle (only in manual sort)
-                    if (widget.sortOption == SortOption.manual) ...[
+                    // Drag Handle (only in manual sort with no active search)
+                    if (widget.sortOption == SortOption.manual && widget.searchQuery.isEmpty) ...[
                       ReorderableDragStartListener(
                         index: index,
                         child: Container(

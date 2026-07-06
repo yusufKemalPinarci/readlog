@@ -176,19 +176,25 @@ class BooksVm extends StateNotifier<BooksState> {
 
   Future<void> reorderBooks(BookShelf shelf, int oldIndex, int newIndex) async {
     final books = byShelf(shelf);
-    if (oldIndex < 0 || oldIndex >= books.length || newIndex < 0 || newIndex >= books.length) {
-      return;
-    }
-    
-    final movedBook = books[oldIndex];
-    final otherBooks = List<Book>.from(books)..removeAt(oldIndex);
-    otherBooks.insert(newIndex, movedBook);
-    
-    // Order değerlerini güncelle
-    for (int i = 0; i < otherBooks.length; i++) {
-      await _repo.upsert(otherBooks[i].copyWith(order: i));
-    }
-    
+    if (oldIndex < 0 || oldIndex >= books.length) return;
+
+    // T1.9: ReorderableListView reports newIndex in [0, length]; when moving an
+    // item downward the target shifts by one once the item is removed, and
+    // newIndex == length means "drop at the end".
+    if (newIndex > oldIndex) newIndex -= 1;
+    if (newIndex < 0) newIndex = 0;
+    if (newIndex >= books.length) newIndex = books.length - 1;
+    if (newIndex == oldIndex) return;
+
+    final reordered = List<Book>.from(books);
+    final movedBook = reordered.removeAt(oldIndex);
+    reordered.insert(newIndex, movedBook);
+
+    // T1.9: reassign order and persist in a single batched save.
+    final updated = <Book>[
+      for (int i = 0; i < reordered.length; i++) reordered[i].copyWith(order: i),
+    ];
+    await _repo.upsertAll(updated);
     await _load();
   }
 }
