@@ -23,6 +23,12 @@ class _DeleteBookDialogState extends State<DeleteBookDialog> {
     _verificationCode = _generateVerificationCode();
   }
 
+  @override
+  void dispose() {
+    _codeController.dispose(); // T2.20: was leaked
+    super.dispose();
+  }
+
   String _generateVerificationCode() {
     final random = Random();
     String code = '';

@@ -28,26 +28,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   String _searchQuery = '';
   SortOption _sortOption = SortOption.manual;
 
+  String? _lastTabParam;
+
   @override
   void initState() {
     super.initState();
     _searchController = TextEditingController();
     _pageController = PageController(initialPage: 0);
-    
-    // Query parameter'dan shelf index'i al
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final uri = GoRouterState.of(context).uri;
-      final tabParam = uri.queryParameters['tab'];
-      if (tabParam != null) {
-        final tabIndex = int.tryParse(tabParam);
-        if (tabIndex != null && tabIndex >= 0 && tabIndex < 3) {
-          setState(() {
-            _selectedShelf = BookShelf.values[tabIndex];
-          });
-          _pageController.jumpToPage(tabIndex);
-        }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // T2.15: react to ?tab= on every navigation, not just first mount — when the
+    // finish flow does context.go('/home?tab=1') the HomeScreen is reused, so an
+    // initState-only handler would ignore the new tab.
+    final tabParam = GoRouterState.of(context).uri.queryParameters['tab'];
+    if (tabParam != null && tabParam != _lastTabParam) {
+      _lastTabParam = tabParam;
+      final tabIndex = int.tryParse(tabParam);
+      if (tabIndex != null && tabIndex >= 0 && tabIndex < 3) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          setState(() => _selectedShelf = BookShelf.values[tabIndex]);
+          if (_pageController.hasClients) _pageController.jumpToPage(tabIndex);
+        });
       }
-    });
+    }
   }
 
   void _onPageChanged(int index) {

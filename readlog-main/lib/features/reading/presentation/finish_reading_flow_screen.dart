@@ -1209,7 +1209,7 @@ class _CongratsStep extends StatelessWidget {
   }
 }
 
-class _PageStep extends ConsumerWidget {
+class _PageStep extends ConsumerStatefulWidget {
   const _PageStep({
     required this.totalPages,
     required this.controller,
@@ -1223,7 +1223,34 @@ class _PageStep extends ConsumerWidget {
   final String bookId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_PageStep> createState() => _PageStepState();
+}
+
+class _PageStepState extends ConsumerState<_PageStep> {
+  // T2.20: create the wheel controller once. It used to be rebuilt inline on
+  // every rebuild, leaking controllers and snapping the wheel back mid-fling.
+  late final FixedExtentScrollController _wheelController;
+
+  @override
+  void initState() {
+    super.initState();
+    _wheelController = FixedExtentScrollController(
+      initialItem: (int.tryParse(widget.controller.text) ?? 0).clamp(0, widget.totalPages),
+    );
+  }
+
+  @override
+  void dispose() {
+    _wheelController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final totalPages = widget.totalPages;
+    final controller = widget.controller;
+    final onSave = widget.onSave;
+    final bookId = widget.bookId;
     final state = ref.watch(finishReadingVmProvider(bookId));
     final isSaving = state.isSaving;
 
@@ -1285,9 +1312,7 @@ class _PageStep extends ConsumerWidget {
                               SizedBox(
                                 height: 200,
                                 child: ListWheelScrollView.useDelegate(
-                                  controller: FixedExtentScrollController(
-                                    initialItem: int.tryParse(controller.text) ?? 0,
-                                  ),
+                                  controller: _wheelController,
                                   itemExtent: 50,
                                   perspective: 0.005,
                                   diameterRatio: 1.5,
