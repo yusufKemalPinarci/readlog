@@ -6,6 +6,42 @@ import '../domain/reading_log.dart';
 import '../../../shared/services/note_storage_service.dart';
 import '../../../shared/services/local_storage_service.dart';
 
+/// T2.6: a log counts as "today" from midnight (inclusive) to the next
+/// midnight (exclusive). Uses DateTime(y,m,d±1) to stay DST-safe. Shared by
+/// both repository implementations so they can't drift.
+bool _hasLogOnDay(List<ReadingLog> items, DateTime dayStart) {
+  final dayEnd = DateTime(dayStart.year, dayStart.month, dayStart.day + 1);
+  return items.any((log) => !log.date.isBefore(dayStart) && log.date.isBefore(dayEnd));
+}
+
+/// T2.3: delete every on-disk asset a log owns (note file, audio, note image).
+Future<void> _deleteLogAssets(NoteStorageService noteService, ReadingLog log) async {
+  await noteService.deleteNote(log.id);
+
+  if (log.audioFilePath != null) {
+    try {
+      final file = File(log.audioFilePath!);
+      if (await file.exists()) await file.delete();
+    } catch (_) {
+      // Ses kaydı silinemezse devam et
+    }
+  }
+
+  if (log.noteFilePath != null) {
+    try {
+      final file = File(log.noteFilePath!);
+      if (await file.exists()) {
+        final ext = log.noteFilePath!.toLowerCase();
+        if (ext.endsWith('.jpg') || ext.endsWith('.jpeg') || ext.endsWith('.png')) {
+          await file.delete();
+        }
+      }
+    } catch (_) {
+      // Resim silinemezse devam et
+    }
+  }
+}
+
 abstract class ReadingLogsRepository {
   Future<List<ReadingLog>> listByBookId(String bookId);
   Future<List<ReadingLog>> listAll();
@@ -181,13 +217,7 @@ class InMemoryReadingLogsRepository implements ReadingLogsRepository {
   @override
   Future<bool> hasCompletedReadingToday() async {
     final now = DateTime.now();
-    final todayStart = DateTime(now.year, now.month, now.day);
-    final todayEnd = todayStart.add(const Duration(days: 1));
-    
-    // Bugün oluşturulan kayıtlar var mı kontrol et
-    return _items.any((log) {
-      return log.date.isAfter(todayStart) && log.date.isBefore(todayEnd);
-    });
+    return _hasLogOnDay(_items, DateTime(now.year, now.month, now.day));
   }
 }
 
@@ -333,53 +363,20 @@ class LocalReadingLogsRepository implements ReadingLogsRepository {
 
   @override
   Future<void> delete(String id) async {
-    await _noteService.deleteNote(id);
-    _items.removeWhere((x) => x.id == id);
+    // T2.3: also delete the log's audio/note-image, not just the note file.
+    final index = _items.indexWhere((x) => x.id == id);
+    if (index < 0) return;
+    await _deleteLogAssets(_noteService, _items[index]);
+    _items.removeAt(index);
     await _save();
   }
 
   @override
   Future<void> deleteByBookId(String bookId) async {
-    // Bu kitaba ait tüm kayıtları bul
     final logsToDelete = _items.where((x) => x.bookId == bookId).toList();
-    
-    // Her kayıt için not dosyasını ve ses kaydını sil
     for (final log in logsToDelete) {
-      // Not dosyasını sil
-      await _noteService.deleteNote(log.id);
-      
-      // Ses kaydı dosyasını sil
-      if (log.audioFilePath != null) {
-        try {
-          final file = File(log.audioFilePath!);
-          if (await file.exists()) {
-            await file.delete();
-          }
-        } catch (e) {
-          // Ses kaydı silinirken hata oluşursa devam et
-        }
-      }
-      
-      // Resim dosyasını sil (noteFilePath resim içeriyorsa)
-      if (log.noteFilePath != null) {
-        try {
-          final file = File(log.noteFilePath!);
-          if (await file.exists()) {
-            // Sadece resim dosyası ise sil (not dosyası değilse)
-            final extension = log.noteFilePath!.toLowerCase();
-            if (extension.endsWith('.jpg') || 
-                extension.endsWith('.jpeg') || 
-                extension.endsWith('.png')) {
-              await file.delete();
-            }
-          }
-        } catch (e) {
-          // Resim silinirken hata oluşursa devam et
-        }
-      }
+      await _deleteLogAssets(_noteService, log);
     }
-    
-    // Kayıtları listeden çıkar
     _items.removeWhere((x) => x.bookId == bookId);
     await _save();
   }
@@ -387,8 +384,6 @@ class LocalReadingLogsRepository implements ReadingLogsRepository {
   @override
   Future<bool> hasCompletedReadingToday() async {
     final now = DateTime.now();
-    final todayStart = DateTime(now.year, now.month, now.day);
-    final todayEnd = todayStart.add(const Duration(days: 1));
-    return _items.any((log) => log.date.isAfter(todayStart) && log.date.isBefore(todayEnd));
+    return _hasLogOnDay(_items, DateTime(now.year, now.month, now.day));
   }
 }
