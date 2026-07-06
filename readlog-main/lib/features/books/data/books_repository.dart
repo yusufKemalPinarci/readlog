@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../domain/book.dart';
 import '../../../shared/services/local_storage_service.dart';
 
@@ -55,7 +57,20 @@ class LocalBooksRepository implements BooksRepository {
   void _reload() {
     final storedData = _storage.loadBooks();
     if (storedData.isNotEmpty) {
-      _items = storedData.map((json) => Book.fromJson(json)).toList();
+      final parsed = <Book>[];
+      var skipped = 0;
+      for (final json in storedData) {
+        final book = Book.tryParse(json);
+        if (book != null) {
+          parsed.add(book);
+        } else {
+          skipped++;
+        }
+      }
+      if (skipped > 0) {
+        debugPrint('LocalBooksRepository: skipped $skipped unparseable book record(s).');
+      }
+      _items = parsed;
     }
   }
 

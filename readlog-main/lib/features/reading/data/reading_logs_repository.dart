@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+
 import '../domain/reading_log.dart';
 import '../../../shared/services/note_storage_service.dart';
 import '../../../shared/services/local_storage_service.dart';
@@ -206,7 +208,20 @@ class LocalReadingLogsRepository implements ReadingLogsRepository {
   void _reload() {
     final storedData = _storage.loadReadingLogs();
     if (storedData.isNotEmpty) {
-      _items = storedData.map((json) => ReadingLog.fromJson(json)).toList();
+      final parsed = <ReadingLog>[];
+      var skipped = 0;
+      for (final json in storedData) {
+        final log = ReadingLog.tryParse(json);
+        if (log != null) {
+          parsed.add(log);
+        } else {
+          skipped++;
+        }
+      }
+      if (skipped > 0) {
+        debugPrint('LocalReadingLogsRepository: skipped $skipped unparseable log record(s).');
+      }
+      _items = parsed;
     }
   }
 

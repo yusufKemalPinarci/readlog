@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../shared/utils/json_parse.dart';
+
 @immutable
 class UserProfile {
   const UserProfile({
@@ -52,16 +54,26 @@ class UserProfile {
     };
   }
 
+  /// Tolerant deserialization (T1.3): never throws on drifted/missing fields.
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      username: json['username'] as String,
-      email: json['email'] as String?,
-      avatarUrl: json['avatarUrl'] as String?,
-      avatarImagePath: json['avatarImagePath'] as String?,
-      dailyGoalMinutes: json['dailyGoalMinutes'] as int? ?? 45,
+      id: asStringOrNull(json['id']) ?? 'u1',
+      name: asStringOrNull(json['name']) ?? '',
+      username: asStringOrNull(json['username']) ?? '',
+      email: asStringOrNull(json['email']),
+      avatarUrl: asStringOrNull(json['avatarUrl']),
+      avatarImagePath: asStringOrNull(json['avatarImagePath']),
+      dailyGoalMinutes: asIntOr(json['dailyGoalMinutes'], 45),
     );
+  }
+
+  /// Returns null when the record can't be parsed at all (T1.3).
+  static UserProfile? tryParse(Map<String, dynamic> json) {
+    try {
+      return UserProfile.fromJson(json);
+    } catch (_) {
+      return null;
+    }
   }
 }
 

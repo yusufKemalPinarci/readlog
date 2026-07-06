@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../shared/utils/json_parse.dart';
+
 /// Sentinel for [ReadingLog.copyWith] so nullable fields can be explicitly
 /// cleared. Omitting a field keeps the current value; passing `null` sets null.
 const Object _unset = Object();
@@ -73,19 +75,39 @@ class ReadingLog {
     };
   }
 
+  /// Tolerant deserialization (T1.3): DateTime.tryParse with fallback and
+  /// coerced numeric fields; never throws on drifted/missing optionals.
   factory ReadingLog.fromJson(Map<String, dynamic> json) {
     return ReadingLog(
-      id: json['id'] as String,
-      bookId: json['bookId'] as String,
-      date: DateTime.parse(json['date'] as String),
-      minutes: json['minutes'] as int,
-      durationSeconds: json['durationSeconds'] as int?,
-      pageAtEnd: json['pageAtEnd'] as int,
-      title: json['title'] as String?,
-      note: json['note'] as String?,
-      audioFilePath: json['audioFilePath'] as String?,
-      noteFilePath: json['noteFilePath'] as String?,
+      id: asStringOrNull(json['id']) ?? '',
+      bookId: asStringOrNull(json['bookId']) ?? '',
+      date: asDateOr(json['date'], DateTime.fromMillisecondsSinceEpoch(0)),
+      minutes: asIntOr(json['minutes'], 0),
+      durationSeconds: asIntOrNull(json['durationSeconds']),
+      pageAtEnd: asIntOr(json['pageAtEnd'], 0),
+      title: asStringOrNull(json['title']),
+      note: asStringOrNull(json['note']),
+      audioFilePath: asStringOrNull(json['audioFilePath']),
+      noteFilePath: asStringOrNull(json['noteFilePath']),
     );
+  }
+
+  /// Returns null for unparseable records (missing/blank id or bookId, or an
+  /// unparseable date) so repositories can skip-and-log instead of throwing (T1.3).
+  static ReadingLog? tryParse(Map<String, dynamic> json) {
+    try {
+      final id = asStringOrNull(json['id']);
+      final bookId = asStringOrNull(json['bookId']);
+      if (id == null || id.isEmpty || bookId == null || bookId.isEmpty) {
+        return null;
+      }
+      if (json['date'] is! String || DateTime.tryParse(json['date'] as String) == null) {
+        return null;
+      }
+      return ReadingLog.fromJson(json);
+    } catch (_) {
+      return null;
+    }
   }
 }
 

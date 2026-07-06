@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../shared/utils/json_parse.dart';
+
 /// Sentinel for [Book.copyWith] so nullable fields can be explicitly cleared.
 /// Omitting a field keeps the current value; passing `null` sets it to null.
 const Object _unset = Object();
@@ -106,23 +108,37 @@ class Book {
     };
   }
 
+  /// Tolerant deserialization (T1.3): clamps a bad `shelf` index to [toRead],
+  /// coerces numeric fields, and never throws on drifted/missing optionals.
   factory Book.fromJson(Map<String, dynamic> json) {
     return Book(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      author: json['author'] as String,
-      totalPages: json['totalPages'] as int,
-      shelf: BookShelf.values[json['shelf'] as int],
-      currentPage: json['currentPage'] as int?,
-      totalMinutes: json['totalMinutes'] as int?,
-      category: json['category'] as String?,
-      readCount: json['readCount'] as int? ?? 0,
-      order: json['order'] as int? ?? 0,
-      coverImagePath: json['coverImagePath'] as String?,
-      review: json['review'] as String?,
-      rating: json['rating'] as int?,
-      finalReadingTimeMinutes: json['finalReadingTimeMinutes'] as int?,
+      id: asStringOrNull(json['id']) ?? '',
+      title: asStringOrNull(json['title']) ?? '',
+      author: asStringOrNull(json['author']) ?? '',
+      totalPages: asIntOr(json['totalPages'], 0),
+      shelf: enumByIndex(BookShelf.values, json['shelf'], BookShelf.toRead),
+      currentPage: asIntOrNull(json['currentPage']),
+      totalMinutes: asIntOrNull(json['totalMinutes']),
+      category: asStringOrNull(json['category']),
+      readCount: asIntOr(json['readCount'], 0),
+      order: asIntOr(json['order'], 0),
+      coverImagePath: asStringOrNull(json['coverImagePath']),
+      review: asStringOrNull(json['review']),
+      rating: asIntOrNull(json['rating']),
+      finalReadingTimeMinutes: asIntOrNull(json['finalReadingTimeMinutes']),
     );
+  }
+
+  /// Returns null for unparseable records (missing/blank id) so repositories
+  /// can skip-and-log instead of throwing on a single corrupt entry (T1.3).
+  static Book? tryParse(Map<String, dynamic> json) {
+    try {
+      final id = asStringOrNull(json['id']);
+      if (id == null || id.isEmpty) return null;
+      return Book.fromJson(json);
+    } catch (_) {
+      return null;
+    }
   }
 }
 
