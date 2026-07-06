@@ -41,6 +41,7 @@ class _EditCompletedBookScreenState extends ConsumerState<EditCompletedBookScree
   File? _selectedImage;
   int? _rating;
   bool _isLoading = false;
+  bool _initialized = false; // T2.17: load book data exactly once
 
   @override
   void initState() {
@@ -226,10 +227,13 @@ class _EditCompletedBookScreenState extends ConsumerState<EditCompletedBookScree
           );
         }
 
-        // İlk yüklemede verileri doldur
-        if (_titleCtrl.text.isEmpty) {
+        // T2.17: populate exactly once. The old guard reloaded whenever the
+        // title field was empty, so clearing the title reverted it every rebuild
+        // and it could never be edited to empty (validated on save instead).
+        if (!_initialized) {
+          _initialized = true;
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            _loadBookData(book);
+            if (mounted) _loadBookData(book);
           });
         }
 

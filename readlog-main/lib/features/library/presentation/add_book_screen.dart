@@ -38,6 +38,7 @@ class _AddBookScreenState extends ConsumerState<AddBookScreen> {
   File? _selectedImage;
   bool _showSearch = true;
   bool _isSearching = false;
+  bool _isSaving = false; // T2.14: guard against double-tap creating two books
   List<OpenLibraryBook> _searchResults = [];
   String? _searchError;
   int? _rating; // Added rating state
@@ -280,6 +281,7 @@ class _AddBookScreenState extends ConsumerState<AddBookScreen> {
   }
 
   Future<void> _save() async {
+    if (_isSaving) return; // T2.14: reentrancy guard
     final title = titleCtrl.text.trim();
     final author = authorCtrl.text.trim();
     final pages = int.tryParse(pagesCtrl.text.trim()) ?? 0;
@@ -293,6 +295,9 @@ class _AddBookScreenState extends ConsumerState<AddBookScreen> {
       return;
     }
 
+    // Set synchronously (before any await) so a second queued tap is blocked.
+    setState(() => _isSaving = true);
+    try {
     final vm = ref.read(booksVmProvider.notifier);
     final id = widget.bookId ?? DateTime.now().microsecondsSinceEpoch.toString();
 
@@ -329,6 +334,9 @@ class _AddBookScreenState extends ConsumerState<AddBookScreen> {
       );
     }
     if (mounted) context.pop();
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override
@@ -790,8 +798,10 @@ class _AddBookScreenState extends ConsumerState<AddBookScreen> {
           ],
           const SizedBox(height: 22),
           FilledButton.icon(
-            onPressed: _save,
-            icon: const Icon(Icons.add),
+            onPressed: _isSaving ? null : _save,
+            icon: _isSaving
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.add),
             label: Text(isEdit ? 'Değişiklikleri Kaydet' : 'Kitap Ekle'),
           ),
         ],

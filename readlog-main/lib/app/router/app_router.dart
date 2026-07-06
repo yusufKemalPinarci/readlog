@@ -140,11 +140,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'calendar_day_detail',
         path: '/calendar-day-detail',
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>;
-          return CalendarDayDetailScreen(
-            date: extra['date'] as DateTime,
-            logs: extra['logs'] as List<ReadingLog>,
-          );
+          // T2.18: tolerate a missing/malformed extra instead of crashing.
+          final extra = state.extra as Map<String, dynamic>?;
+          final date = extra?['date'];
+          final logs = extra?['logs'];
+          if (date is! DateTime || logs is! List<ReadingLog>) {
+            return _RouterErrorScreen(error: Exception('Geçersiz gün detayı verisi'));
+          }
+          return CalendarDayDetailScreen(date: date, logs: logs);
         },
       ),
       GoRoute(
