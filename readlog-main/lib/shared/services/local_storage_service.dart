@@ -14,6 +14,20 @@ class StorageCorruptionException implements Exception {
   String toString() => 'StorageCorruptionException($key): $cause';
 }
 
+/// Raw snapshot of the persisted blobs for transactional import rollback (T1.5).
+class StorageSnapshot {
+  StorageSnapshot({
+    required this.books,
+    required this.logs,
+    required this.profile,
+    required this.themeMode,
+  });
+  final String? books;
+  final String? logs;
+  final String? profile;
+  final String? themeMode;
+}
+
 class LocalStorageService {
   LocalStorageService(this._prefs);
 
@@ -120,6 +134,30 @@ class LocalStorageService {
       return jsonDecode(jsonString) as Map<String, dynamic>;
     } catch (e) {
       return null;
+    }
+  }
+
+  // Transactional snapshot/restore (T1.5) — used to roll storage back when an
+  // import fails partway, so a bad backup can't leave data half-written.
+  StorageSnapshot snapshot() => StorageSnapshot(
+        books: _prefs.getString(_booksKey),
+        logs: _prefs.getString(_readingLogsKey),
+        profile: _prefs.getString(_profileKey),
+        themeMode: loadThemeModeString(),
+      );
+
+  Future<void> restore(StorageSnapshot s) async {
+    await _writeOrRemove(_booksKey, s.books);
+    await _writeOrRemove(_readingLogsKey, s.logs);
+    await _writeOrRemove(_profileKey, s.profile);
+    await saveThemeModeString(s.themeMode);
+  }
+
+  Future<void> _writeOrRemove(String key, String? value) async {
+    if (value == null) {
+      await _prefs.remove(key);
+    } else {
+      await _prefs.setString(key, value);
     }
   }
 
