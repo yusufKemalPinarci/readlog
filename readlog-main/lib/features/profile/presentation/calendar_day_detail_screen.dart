@@ -52,25 +52,25 @@ class CalendarDayDetailScreen extends ConsumerWidget {
              (logDate.isAfter(dayStart) && logDate.isBefore(dayEnd));
     }).toList();
     
-    // Kitapları grupla - sadece read shelf'indeki kitaplar ve mevcut kitaplar
+    // T1.12: include every session for the day regardless of the book's shelf,
+    // and keep sessions whose book was deleted (shown as a "Silinmiş kitap"
+    // placeholder) so calendar, streak and this detail view agree.
     final booksByLog = <String, Book>{};
     final logsByBook = <String, List<ReadingLog>>{};
     int totalMinutes = 0;
-    
-    // Sadece mevcut kitapların loglarını işle
-    final validDayLogs = dayLogs.where((log) {
-      final book = booksVm.byId(log.bookId);
-      return book != null && book.shelf == BookShelf.read;
-    }).toList();
-    
-    for (var log in validDayLogs) {
-      final book = booksVm.byId(log.bookId);
-      // Sadece mevcut ve read shelf'indeki kitapları göster
-      if (book != null && book.shelf == BookShelf.read) {
-        booksByLog[log.bookId] = book;
-        logsByBook.putIfAbsent(log.bookId, () => []).add(log);
-        totalMinutes += log.effectiveDurationSeconds; // Sadece mevcut kitapların süresini ekle
-      }
+
+    for (final log in dayLogs) {
+      final book = booksVm.byId(log.bookId) ??
+          Book(
+            id: log.bookId,
+            title: 'Silinmiş kitap',
+            author: '',
+            totalPages: 0,
+            shelf: BookShelf.read,
+          );
+      booksByLog[log.bookId] = book;
+      logsByBook.putIfAbsent(log.bookId, () => []).add(log);
+      totalMinutes += log.effectiveDurationSeconds;
     }
     
     // Sayfa hesaplama - o gün için okunan sayfa sayısı
@@ -116,7 +116,7 @@ class CalendarDayDetailScreen extends ConsumerWidget {
           onPressed: () => context.pop(),
         ),
       ),
-      body: validDayLogs.isEmpty || logsByBook.isEmpty
+      body: logsByBook.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -371,11 +371,10 @@ class CalendarDayDetailScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   
-                  ...validDayLogs.where((log) {
-                    // Sadece mevcut kitapların loglarını göster
-                    final book = booksVm.byId(log.bookId);
-                    return log.bookId.isNotEmpty && book != null;
-                  }).map((log) {
+                  // T1.12: show every session for the day, including unfinished
+                  // and deleted-book sessions (the book subtitle is omitted when
+                  // the book no longer exists).
+                  ...dayLogs.map((log) {
                     final book = booksVm.byId(log.bookId);
                     return Card(
                       margin: const EdgeInsets.only(bottom: 8),

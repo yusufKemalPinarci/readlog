@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../reading/domain/reading_log.dart';
 import 'package:go_router/go_router.dart';
-import '../../../books/application/books_vm.dart';
 
 class ReadingCalendarWidget extends StatefulWidget {
   const ReadingCalendarWidget({
@@ -111,7 +110,6 @@ class _WeeklyChart extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final booksVm = ref.watch(booksVmProvider.notifier);
     final now = DateTime.now();
     // Son 7 günü bul
     final weekDays = List.generate(7, (index) {
@@ -119,11 +117,9 @@ class _WeeklyChart extends ConsumerWidget {
       return DateTime(date.year, date.month, date.day);
     });
 
-    // Sadece mevcut kitapların loglarını filtrele
-    final validLogs = logs.where((log) {
-      final book = booksVm.byId(log.bookId);
-      return book != null;
-    }).toList();
+    // T2.11: logs of deleted books count everywhere (streak already includes
+    // them), so don't filter them out of the weekly chart.
+    final validLogs = logs;
 
     // Günlük logları grupla
     final logsByDay = <DateTime, List<ReadingLog>>{};
@@ -226,19 +222,15 @@ class _MonthlyCalendar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-      final booksVm = ref.watch(booksVmProvider.notifier);
       final now = DateTime.now();
       final isCurrentMonth = focusedMonth.year == now.year && focusedMonth.month == now.month;
       
       final firstDayOfMonth = DateTime(focusedMonth.year, focusedMonth.month, 1);
       final daysInMonth = DateUtils.getDaysInMonth(focusedMonth.year, focusedMonth.month);
       
-      // Sadece mevcut kitapların loglarını filtrele
-      final validLogs = logs.where((log) {
-        final book = booksVm.byId(log.bookId);
-        return book != null;
-      }).toList();
-      
+      // T2.11: include deleted books' logs (consistent with streak/day-detail).
+      final validLogs = logs;
+
       final logsByDate = <DateTime, List<ReadingLog>>{};
       for (var log in validLogs) {
         final date = DateTime(log.date.year, log.date.month, log.date.day);
