@@ -7,8 +7,10 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/router/app_router.dart';
 import '../../../../shared/widgets/book_scaffold.dart';
+import '../../../../shared/utils/reading_stats.dart';
 import '../../books/application/books_vm.dart';
 import '../../books/domain/book.dart';
+import '../../reading/application/reading_providers.dart';
 import '../../reading/domain/reading_log.dart';
 
 // Süre formatlama yardımcı fonksiyonu
@@ -73,37 +75,14 @@ class CalendarDayDetailScreen extends ConsumerWidget {
       totalMinutes += log.effectiveDurationSeconds;
     }
     
-    // Sayfa hesaplama - o gün için okunan sayfa sayısı
+    // T2.9: pages read that day = max pageAtEnd on the day − max before it, using
+    // each book's FULL history (not just this day's sessions). Shared helper.
+    final allLogs = ref.watch(readingLogsProvider);
     int totalPages = 0;
     final pagesByBook = <String, int>{};
-    
-    for (var entry in logsByBook.entries) {
-      final bookId = entry.key;
-      final bookLogs = entry.value;
-      
-      // O gün için bu kitapta okunan sayfa sayısını hesapla
-      // Logları tarihe göre sırala
-      bookLogs.sort((a, b) => a.date.compareTo(b.date));
-      
-      int pagesRead = 0;
-      if (bookLogs.length == 1) {
-        // Tek log varsa, sadece o sayfaya kadar okunmuş
-        pagesRead = bookLogs.first.pageAtEnd;
-      } else {
-        // Birden fazla log varsa, ilk ve son sayfa arasındaki fark
-        final firstPage = bookLogs.first.pageAtEnd;
-        final lastPage = bookLogs.last.pageAtEnd;
-        
-        // Eğer ilk sayfa 0 ise, son sayfa kadar okunmuş
-        // Değilse, son sayfa - ilk sayfa kadar okunmuş
-        pagesRead = firstPage == 0 ? lastPage : (lastPage - firstPage);
-        
-        // Eğer negatif veya 0 ise, sadece son sayfayı al
-        if (pagesRead <= 0) {
-          pagesRead = lastPage;
-        }
-      }
-      
+    for (final bookId in logsByBook.keys) {
+      final bookHistory = allLogs.where((l) => l.bookId == bookId).toList();
+      final pagesRead = pagesReadOnDay(bookHistory, date);
       pagesByBook[bookId] = pagesRead;
       totalPages += pagesRead;
     }

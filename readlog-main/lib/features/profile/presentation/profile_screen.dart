@@ -428,7 +428,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   children: [
                                     Padding(
                                       padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                                      child: ReadingCalendarWidget(logs: stats.logs),
+                                      // T2.10: the calendar/chart always show ALL
+                                      // logs; only the aggregate cards use the
+                                      // period filter (stats.logs).
+                                      child: ReadingCalendarWidget(logs: logs),
                                     ),
                                   ],
                                 ),
