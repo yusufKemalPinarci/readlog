@@ -142,9 +142,5 @@ class OpenLibraryService {
     }
   }
 
-  /// Sayfa sayısını çek - artık arama sonuçlarında geliyor, uyumluluk için korundu
-  Future<int?> fetchPageCount(String workKey) async {
-    return null;
-  }
 }
 

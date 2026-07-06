@@ -341,7 +341,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       shelf: BookShelf.toRead,
                       onMoveToShelf: (book, targetShelf) => vm.moveBookToShelf(book.id, targetShelf),
                       onReorder: (oldIndex, newIndex) => vm.reorderBooks(BookShelf.toRead, oldIndex, newIndex),
-                      onTap: (b) => context.push(Routes.bookDetail(b.id)),
+                      onTap: (b) => context.push(Routes.bookReadingLogs(b.id)),
                       menuBuilder: (context, book) => [
                         PopupMenuItem(
                           value: _MenuAction.startReading,
@@ -391,7 +391,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       shelf: BookShelf.reading,
                       onMoveToShelf: (book, targetShelf) => vm.moveBookToShelf(book.id, targetShelf),
                       onReorder: (oldIndex, newIndex) => vm.reorderBooks(BookShelf.reading, oldIndex, newIndex),
-                      onTap: (b) => context.push(Routes.bookDetail(b.id)),
+                      onTap: (b) => context.push(Routes.bookReadingLogs(b.id)),
                       onContinueReading: (b) => context.push(Routes.activeReadingFor(b.id)),
                       menuBuilder: (context, book) => [
                         PopupMenuItem(
@@ -447,7 +447,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       shelf: BookShelf.read,
                       onMoveToShelf: (book, targetShelf) => vm.moveBookToShelf(book.id, targetShelf),
                       onReorder: (oldIndex, newIndex) => vm.reorderBooks(BookShelf.read, oldIndex, newIndex),
-                      onTap: (b) => context.push(Routes.bookDetail(b.id)),
+                      onTap: (b) => context.push(Routes.bookReadingLogs(b.id)),
                       menuBuilder: (context, book) => [
                         PopupMenuItem(
                           value: _MenuAction.edit,

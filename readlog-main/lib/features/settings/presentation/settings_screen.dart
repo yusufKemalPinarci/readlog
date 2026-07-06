@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../app/router/app_router.dart';
 import '../../../app/theme/theme_manager.dart';
@@ -11,6 +12,12 @@ import '../application/notification_providers.dart';
 import '../../../shared/services/data_backup_service.dart';
 import '../../books/application/books_providers.dart';
 import '../../reading/application/reading_providers.dart';
+
+// T3.6: real app version (replaces the hardcoded "1.0.2").
+final appVersionProvider = FutureProvider<String>((ref) async {
+  final info = await PackageInfo.fromPlatform();
+  return info.version;
+});
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -367,18 +374,20 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 32),
-              const Center(
+              Center(
                 child: Column(
                   children: [
-                    Text(
-                      'Versiyon 1.0.2',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
-                      ),
+                    Consumer(
+                      builder: (context, ref, _) {
+                        final version = ref.watch(appVersionProvider).valueOrNull;
+                        return Text(
+                          version == null ? 'Versiyon' : 'Versiyon $version',
+                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        );
+                      },
                     ),
-                    SizedBox(height: 4),
-                    Text(
+                    const SizedBox(height: 4),
+                    const Text(
                       'Design for Calmness',
                       style: TextStyle(
                         fontSize: 11,

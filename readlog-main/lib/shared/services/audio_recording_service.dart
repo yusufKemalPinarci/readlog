@@ -168,25 +168,6 @@ class AudioRecordingService {
     }
   }
 
-  /// Kayıt süresini al (saniye cinsinden)
-  Future<Duration?> getRecordingDuration() async {
-    if (!_isRecording || _currentRecordingPath == null) {
-      return null;
-    }
-
-    try {
-      final file = File(_currentRecordingPath!);
-      if (await file.exists()) {
-        // Dosya boyutundan yaklaşık süre hesapla (tam değil, yaklaşık)
-        // Gerçek süre için just_audio kullanılabilir
-        return null; // Şimdilik null döndür, timer'dan alınacak
-      }
-    } catch (e) {
-      return null;
-    }
-    return null;
-  }
-
   void dispose() {
     _recorder.dispose();
   }

@@ -209,21 +209,7 @@ class CalendarDayDetailScreen extends ConsumerWidget {
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
                       child: InkWell(
-                        onTap: () {
-                          // O güne özel kayıtları göster
-                          final dayFilteredLogs = bookLogs.where((log) {
-                            final logDate = DateTime(log.date.year, log.date.month, log.date.day);
-                            final dayStart = DateTime(date.year, date.month, date.day);
-                            final dayEnd = DateTime(dayStart.year, dayStart.month, dayStart.day + 1); // T2.5 DST-safe
-                            return logDate.isAtSameMomentAs(dayStart) || 
-                                   (logDate.isAfter(dayStart) && logDate.isBefore(dayEnd));
-                          }).toList();
-                          
-                          context.push(
-                            Routes.bookReadingLogs(bookId),
-                            extra: {'filteredLogs': dayFilteredLogs, 'filterDate': date},
-                          );
-                        },
+                        onTap: () => context.push(Routes.bookReadingLogs(bookId)),
                         borderRadius: BorderRadius.circular(12),
                         child: Padding(
                           padding: const EdgeInsets.all(16),

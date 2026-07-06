@@ -117,12 +117,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
-        path: '/book-detail/:bookId',
-        builder: (context, state) => BookReadingLogsScreen(
-          bookId: state.pathParameters['bookId']!,
-        ),
-      ),
-      GoRoute(
         path: '/edit-completed-book/:bookId',
         builder: (context, state) => EditCompletedBookScreen(
           bookId: state.pathParameters['bookId']!,
@@ -171,7 +165,6 @@ abstract final class Routes {
   static String readingLogDetail(String logId) => '/reading-log/$logId';
   static String editReadingLog(String logId) => '/edit-reading-log/$logId';
   static String bookReadingLogs(String bookId) => '/book-reading-logs/$bookId';
-  static String bookDetail(String bookId) => '/book-detail/$bookId';
   static const editProfile = '/edit-profile';
   static const dailyGoal = '/daily-goal';
   static const settings = '/settings';

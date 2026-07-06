@@ -123,22 +123,8 @@ class _AddBookScreenState extends ConsumerState<AddBookScreen> {
     titleCtrl.text = book.title;
     authorCtrl.text = book.author ?? '';
 
-    // Sayfa sayısını doldur - yoksa editions API'den çek
-    if (book.pageCount != null) {
-      pagesCtrl.text = book.pageCount.toString();
-    } else if (book.editionKey != null) {
-      pagesCtrl.text = '';
-      try {
-        final pages = await _openLibraryService.fetchPageCount(book.editionKey!);
-        if (pages != null && mounted && pagesCtrl.text.isEmpty) {
-          pagesCtrl.text = pages.toString();
-        }
-      } catch (_) {
-        // Sayfa sayısı opsiyonel, hata yoksayılır
-      }
-    } else {
-      pagesCtrl.text = '';
-    }
+    // Sayfa sayısı arama sonucundan gelir; yoksa boş bırakılır (T3.4).
+    pagesCtrl.text = book.pageCount != null ? book.pageCount.toString() : '';
 
     // Kapak resmini indir ve kaydet (yüksek kaliteli URL kullan)
     final downloadUrl = book.highResCoverUrl ?? book.coverImageUrl;
