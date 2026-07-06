@@ -109,7 +109,13 @@ class FinishReadingVm extends AutoDisposeFamilyNotifier<FinishReadingState, Stri
   /// çift sayıma yol açardı. Yeni log yalnızca bu oturumun süresini taşır.
   Future<void> loadTotalMinutesForBook() async {
     final repo = ref.read(readingLogsRepositoryProvider);
-    final logs = await repo.listByBookId(arg);
+    var logs = await repo.listByBookId(arg);
+    // T2.7: on a re-read, only sum logs from the current pass (>= lastStartedAt).
+    final book = ref.read(booksVmProvider.notifier).byId(arg);
+    final since = book?.lastStartedAt;
+    if (since != null) {
+      logs = logs.where((log) => !log.date.isBefore(since)).toList();
+    }
     final totalSeconds = logs.fold<int>(0, (sum, log) => sum + log.effectiveDurationSeconds);
     final totalMinutes = totalSeconds ~/ 60;
     if (totalMinutes > 0) {

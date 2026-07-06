@@ -114,8 +114,10 @@ class BooksVm extends StateNotifier<BooksState> {
   Future<void> markAsRead(String id, {String? review, int? finalMinutes, int? rating}) async {
     final current = await _repo.getById(id);
     if (current == null) return;
-    // İlk kez okunduğunda readCount'u 1 yap
-    final newReadCount = current.readCount == 0 ? 1 : current.readCount;
+    // T2.7: count a completion here (completing a re-read increments; abandoning
+    // a restart does not). Only when transitioning INTO the read shelf.
+    final newReadCount =
+        current.shelf == BookShelf.read ? current.readCount : current.readCount + 1;
     await _repo.upsert(current.copyWith(
       shelf: BookShelf.read,
       currentPage: current.totalPages,
@@ -130,14 +132,13 @@ class BooksVm extends StateNotifier<BooksState> {
   Future<void> restartReading(String id) async {
     final current = await _repo.getById(id);
     if (current == null) return;
-    // Eğer kitap daha önce okunduysa (read shelf'indeyse), readCount'u artır
-    final newReadCount = current.shelf == BookShelf.read 
-        ? current.readCount + 1 
-        : current.readCount;
+    // T2.7: do NOT increment readCount here — restarting/abandoning shouldn't
+    // count; completing (markAsRead) does. Stamp lastStartedAt so the finish
+    // flow sums only this pass's logs.
     await _repo.upsert(current.copyWith(
       shelf: BookShelf.reading,
       currentPage: 0,
-      readCount: newReadCount,
+      lastStartedAt: DateTime.now(),
     ));
     await _load();
   }

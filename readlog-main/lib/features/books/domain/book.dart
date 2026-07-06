@@ -29,6 +29,7 @@ class Book {
     this.review,
     this.rating,
     this.finalReadingTimeMinutes,
+    this.lastStartedAt,
   });
 
   final String id;
@@ -48,6 +49,11 @@ class Book {
   final String? review;
   final int? rating; // 1-5 or 1-10
   final int? finalReadingTimeMinutes; // User's manual input or final calc
+
+  /// When the current reading pass started (set on restart). T2.7: the finish
+  /// flow sums only logs on/after this so a re-read's total excludes prior
+  /// passes. Null = no restart yet → include all logs (legacy behavior).
+  final DateTime? lastStartedAt;
 
   double get progress {
     final cp = currentPage ?? 0;
@@ -70,6 +76,7 @@ class Book {
     Object? review = _unset,
     Object? rating = _unset,
     Object? finalReadingTimeMinutes = _unset,
+    Object? lastStartedAt = _unset,
   }) {
     return Book(
       id: id ?? this.id,
@@ -87,6 +94,8 @@ class Book {
       rating: identical(rating, _unset) ? this.rating : rating as int?,
       finalReadingTimeMinutes:
           identical(finalReadingTimeMinutes, _unset) ? this.finalReadingTimeMinutes : finalReadingTimeMinutes as int?,
+      lastStartedAt:
+          identical(lastStartedAt, _unset) ? this.lastStartedAt : lastStartedAt as DateTime?,
     );
   }
   Map<String, dynamic> toJson() {
@@ -105,6 +114,7 @@ class Book {
       'review': review,
       'rating': rating,
       'finalReadingTimeMinutes': finalReadingTimeMinutes,
+      'lastStartedAt': lastStartedAt?.toIso8601String(),
     };
   }
 
@@ -126,6 +136,9 @@ class Book {
       review: asStringOrNull(json['review']),
       rating: asIntOrNull(json['rating']),
       finalReadingTimeMinutes: asIntOrNull(json['finalReadingTimeMinutes']),
+      lastStartedAt: json['lastStartedAt'] is String
+          ? DateTime.tryParse(json['lastStartedAt'] as String)
+          : null,
     );
   }
 
