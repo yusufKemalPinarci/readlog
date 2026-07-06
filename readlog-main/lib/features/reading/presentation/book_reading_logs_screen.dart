@@ -134,8 +134,8 @@ class _ContentState extends ConsumerState<_Content> {
         widget.filterDate!.month,
         widget.filterDate!.day,
       );
-      final dayEnd = dayStart.add(const Duration(days: 1));
-      
+      final dayEnd = DateTime(dayStart.year, dayStart.month, dayStart.day + 1); // T2.5 DST-safe
+
       logsToFilter = widget.logs.where((log) {
         final logDate = DateTime(log.date.year, log.date.month, log.date.day);
         return logDate.isAtSameMomentAs(dayStart) || 

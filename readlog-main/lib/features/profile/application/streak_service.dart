@@ -3,6 +3,11 @@ import '../../reading/domain/reading_log.dart';
 
 final streakServiceProvider = Provider((ref) => StreakService());
 
+/// T2.5: step one calendar day back. `subtract(Duration(days: 1))` shifts by a
+/// fixed 24h and lands on the wrong day across DST transitions (23/25h days);
+/// building the date from components is DST-safe.
+DateTime _prevDay(DateTime d) => DateTime(d.year, d.month, d.day - 1);
+
 class StreakService {
   /// Calculate current streak (consecutive days ending today or yesterday)
   int calculateCurrentStreak(List<ReadingLog> logs) {
@@ -18,7 +23,7 @@ class StreakService {
 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final yesterday = today.subtract(const Duration(days: 1));
+    final yesterday = _prevDay(today);
 
     // Check if user read today or yesterday
     final lastReadDate = uniqueDates.first;
@@ -32,7 +37,7 @@ class StreakService {
     for (final date in uniqueDates) {
       if (date == checkDate) {
         streak++;
-        checkDate = checkDate.subtract(const Duration(days: 1));
+        checkDate = _prevDay(checkDate);
       } else {
         break; 
       }
@@ -59,16 +64,16 @@ class StreakService {
     for (final date in uniqueDates) {
       if (expectedDate == null) {
         currentStreak = 1;
-        expectedDate = date.subtract(const Duration(days: 1));
+        expectedDate = _prevDay(date);
       } else {
         if (date == expectedDate) {
           currentStreak++;
-          expectedDate = date.subtract(const Duration(days: 1));
+          expectedDate = _prevDay(date);
         } else {
           // Break in streak
           if (currentStreak > maxStreak) maxStreak = currentStreak;
           currentStreak = 1;
-          expectedDate = date.subtract(const Duration(days: 1));
+          expectedDate = _prevDay(date);
         }
       }
     }

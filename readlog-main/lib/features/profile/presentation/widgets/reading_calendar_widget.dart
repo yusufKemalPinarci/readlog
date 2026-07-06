@@ -113,8 +113,8 @@ class _WeeklyChart extends ConsumerWidget {
     final now = DateTime.now();
     // Son 7 günü bul
     final weekDays = List.generate(7, (index) {
-      final date = now.subtract(Duration(days: 6 - index));
-      return DateTime(date.year, date.month, date.day);
+      // T2.5: DST-safe day stepping.
+      return DateTime(now.year, now.month, now.day - (6 - index));
     });
 
     // T2.11: logs of deleted books count everywhere (streak already includes

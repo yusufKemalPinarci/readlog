@@ -242,7 +242,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                      builder: (context) {
                        final now = DateTime.now();
                        final todayStart = DateTime(now.year, now.month, now.day);
-                       final todayEnd = todayStart.add(const Duration(days: 1));
+                       final todayEnd = DateTime(now.year, now.month, now.day + 1); // T2.5 DST-safe
                        final todaySeconds = logs
                            .where((l) => !l.date.isBefore(todayStart) && l.date.isBefore(todayEnd))
                            .fold<int>(0, (s, l) => s + l.effectiveDurationSeconds);
