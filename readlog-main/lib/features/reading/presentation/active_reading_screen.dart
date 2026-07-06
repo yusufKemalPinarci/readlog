@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/router/app_router.dart';
+import '../../../shared/utils/duration_format.dart';
 import '../../../shared/widgets/book_scaffold.dart';
 import '../../../shared/widgets/confirm_dialog.dart';
 import '../application/active_reading_vm.dart';
@@ -195,11 +196,7 @@ class _TimerDisplay extends StatelessWidget {
   final ReadingMode mode;
   final Duration? recordingDuration;
 
-  String _formatDuration(Duration d) {
-    final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$minutes:$seconds';
-  }
+  String _formatDuration(Duration d) => formatDurationClock(d);
 
   @override
   Widget build(BuildContext context) {

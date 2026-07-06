@@ -6,6 +6,8 @@ import 'package:libris/features/books/domain/book.dart';
 import 'package:libris/features/books/data/books_repository.dart';
 import 'package:libris/features/books/application/books_providers.dart';
 import 'package:libris/features/reading/domain/reading_log.dart';
+import 'package:libris/features/reading/data/reading_logs_repository.dart';
+import 'package:libris/features/reading/application/reading_providers.dart';
 import 'package:libris/features/profile/presentation/calendar_day_detail_screen.dart';
 
 void main() {
@@ -25,6 +27,8 @@ void main() {
 
     final container = ProviderContainer(overrides: [
       booksRepositoryProvider.overrideWithValue(InMemoryBooksRepository(seed: [book])),
+      readingLogsRepositoryProvider
+          .overrideWithValue(InMemoryReadingLogsRepository(seed: [log])),
     ]);
     addTearDown(container.dispose);
     // Pre-load BooksVm on the REAL event loop (runAsync) so byId() has the book
@@ -59,6 +63,8 @@ void main() {
     await tester.pumpWidget(ProviderScope(
       overrides: [
         booksRepositoryProvider.overrideWithValue(InMemoryBooksRepository(seed: const [])),
+        readingLogsRepositoryProvider
+            .overrideWithValue(InMemoryReadingLogsRepository(seed: [log])),
       ],
       child: MaterialApp(
         home: CalendarDayDetailScreen(date: DateTime(2026, 1, 15), logs: [log]),
