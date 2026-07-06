@@ -28,6 +28,9 @@ class _CountingRepo implements BooksRepository {
 
   @override
   Future<void> delete(String id) => _inner.delete(id);
+
+  @override
+  Future<void> reload() => _inner.reload();
 }
 
 Future<void> _settle() async {

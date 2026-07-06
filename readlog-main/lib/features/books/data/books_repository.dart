@@ -11,6 +11,10 @@ abstract class BooksRepository {
   /// Upserts many books with a single persist (T1.9: batched reorder save).
   Future<void> upsertAll(List<Book> books);
   Future<void> delete(String id);
+
+  /// Re-read from the backing store (T2.4: called after a backup import so the
+  /// app-lifetime singleton repo reflects the new data without being recreated).
+  Future<void> reload();
 }
 
 class InMemoryBooksRepository implements BooksRepository {
@@ -55,6 +59,11 @@ class InMemoryBooksRepository implements BooksRepository {
   Future<void> delete(String id) async {
     _items.removeWhere((b) => b.id == id);
   }
+
+  @override
+  Future<void> reload() async {
+    // In-memory test double: nothing to re-read.
+  }
 }
 
 class LocalBooksRepository implements BooksRepository {
@@ -78,22 +87,22 @@ class LocalBooksRepository implements BooksRepository {
     try {
       final storedData = _storage.loadBooks();
       _corrupt = false;
-      if (storedData.isNotEmpty) {
-        final parsed = <Book>[];
-        var skipped = 0;
-        for (final json in storedData) {
-          final book = Book.tryParse(json);
-          if (book != null) {
-            parsed.add(book);
-          } else {
-            skipped++;
-          }
+      // T2.4: assign unconditionally — empty storage means an empty library
+      // (e.g. after an import that removed books), not "keep the old items".
+      final parsed = <Book>[];
+      var skipped = 0;
+      for (final json in storedData) {
+        final book = Book.tryParse(json);
+        if (book != null) {
+          parsed.add(book);
+        } else {
+          skipped++;
         }
-        if (skipped > 0) {
-          debugPrint('LocalBooksRepository: skipped $skipped unparseable book record(s).');
-        }
-        _items = parsed;
       }
+      if (skipped > 0) {
+        debugPrint('LocalBooksRepository: skipped $skipped unparseable book record(s).');
+      }
+      _items = parsed;
     } on StorageCorruptionException catch (e) {
       _corrupt = true;
       debugPrint('LocalBooksRepository: storage corrupt, entering read-only. $e');
@@ -102,6 +111,7 @@ class LocalBooksRepository implements BooksRepository {
   }
 
   /// Verileri storage'dan yeniden yükle (import sonrası kullanılır)
+  @override
   Future<void> reload() async {
     _reload();
   }

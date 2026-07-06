@@ -171,21 +171,15 @@ class FinishReadingVm extends AutoDisposeFamilyNotifier<FinishReadingState, Stri
         title: state.title,
       );
       
-      // Use notifier to add log so UI updates immediately
+      // Use notifier to add log so UI updates immediately. The notifier reloads
+      // from the singleton repository, so no provider invalidation is needed.
       await ref.read(readingLogsProvider.notifier).addLog(log);
-      
-      // Provider'ları invalidate et ki yeni kayıt görünsün
-      ref.invalidate(readingLogsProvider);
-      
-      // readingLogProvider'ı invalidate et (family provider olduğu için logId ile)
+
+      // T2.4: never invalidate the repository/list providers — that would rebuild
+      // a fresh repo from storage and drop any in-flight in-memory state
+      // (lost-update / resurrection class). Only refresh the specific per-log
+      // detail view, which reads from the same singleton repo.
       ref.invalidate(readingLogProvider(logId));
-      
-      // _readingLogProvider'ı invalidate et (family provider olduğu için logId ile)
-      // Not: reading_log_detail_screen.dart'da tanımlı, burada import edemeyiz
-      // Ama repository'yi invalidate edersek _readingLogProvider otomatik yenilenecek
-      // Ancak bu yeni instance oluşturur, bu yüzden önce storage'a yazılmasını bekliyoruz
-      // _save() zaten await edildi, bu yüzden güvenli
-      ref.invalidate(readingLogsRepositoryProvider);
 
       // Kitabın currentPage'ini güncelle
       await booksVm.updateCurrentPage(arg, pageAtEnd);

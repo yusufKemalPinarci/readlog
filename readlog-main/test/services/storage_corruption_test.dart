@@ -58,4 +58,22 @@ void main() {
       expect(prefs.getString('books_data'), corrupt);
     });
   });
+
+  group('LocalBooksRepository.reload reflects emptied storage (T2.4)', () {
+    test('reload() clears items when storage becomes empty', () async {
+      SharedPreferences.setMockInitialValues({
+        'books_data': '[{"id":"1","title":"A","author":"x","totalPages":100,"shelf":0}]',
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final storage = LocalStorageService(prefs);
+      final repo = LocalBooksRepository(storage);
+      expect((await repo.list()).length, 1);
+
+      // Simulate an import that removed all books.
+      await storage.saveBooks([]);
+      await repo.reload();
+      expect(await repo.list(), isEmpty,
+          reason: 'the old isNotEmpty guard kept stale items after a wipe/import');
+    });
+  });
 }

@@ -51,6 +51,9 @@ abstract class ReadingLogsRepository {
   Future<void> delete(String id);
   Future<void> deleteByBookId(String bookId);
   Future<bool> hasCompletedReadingToday();
+
+  /// Re-read from the backing store (T2.4: after a backup import).
+  Future<void> reload();
 }
 
 class InMemoryReadingLogsRepository implements ReadingLogsRepository {
@@ -219,6 +222,11 @@ class InMemoryReadingLogsRepository implements ReadingLogsRepository {
     final now = DateTime.now();
     return _hasLogOnDay(_items, DateTime(now.year, now.month, now.day));
   }
+
+  @override
+  Future<void> reload() async {
+    // In-memory test double: nothing to re-read.
+  }
 }
 
 class LocalReadingLogsRepository implements ReadingLogsRepository {
@@ -243,22 +251,21 @@ class LocalReadingLogsRepository implements ReadingLogsRepository {
     try {
       final storedData = _storage.loadReadingLogs();
       _corrupt = false;
-      if (storedData.isNotEmpty) {
-        final parsed = <ReadingLog>[];
-        var skipped = 0;
-        for (final json in storedData) {
-          final log = ReadingLog.tryParse(json);
-          if (log != null) {
-            parsed.add(log);
-          } else {
-            skipped++;
-          }
+      // T2.4: assign unconditionally so empty storage clears the list.
+      final parsed = <ReadingLog>[];
+      var skipped = 0;
+      for (final json in storedData) {
+        final log = ReadingLog.tryParse(json);
+        if (log != null) {
+          parsed.add(log);
+        } else {
+          skipped++;
         }
-        if (skipped > 0) {
-          debugPrint('LocalReadingLogsRepository: skipped $skipped unparseable log record(s).');
-        }
-        _items = parsed;
       }
+      if (skipped > 0) {
+        debugPrint('LocalReadingLogsRepository: skipped $skipped unparseable log record(s).');
+      }
+      _items = parsed;
     } on StorageCorruptionException catch (e) {
       _corrupt = true;
       debugPrint('LocalReadingLogsRepository: storage corrupt, entering read-only. $e');
@@ -266,6 +273,7 @@ class LocalReadingLogsRepository implements ReadingLogsRepository {
   }
 
   /// Verileri storage'dan yeniden yükle (import sonrası kullanılır)
+  @override
   Future<void> reload() async {
     _reload();
   }

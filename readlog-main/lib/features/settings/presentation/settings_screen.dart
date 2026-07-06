@@ -331,11 +331,12 @@ class SettingsScreen extends ConsumerWidget {
                                 replaceExisting: false,
                               );
 
-                              // Provider'ları yenile
-                              ref.invalidate(readingLogsRepositoryProvider);
-                              ref.invalidate(booksRepositoryProvider);
-                              ref.invalidate(booksVmProvider);
-                              ref.invalidate(readingLogsProvider);
+                              // T2.4: reload the app-lifetime singleton repos and
+                              // their notifiers instead of invalidating them.
+                              await ref.read(booksRepositoryProvider).reload();
+                              await ref.read(readingLogsRepositoryProvider).reload();
+                              await ref.read(booksVmProvider.notifier).reload();
+                              await ref.read(readingLogsProvider.notifier).reload();
 
                               if (context.mounted) {
                                 Navigator.of(context).pop(); // Loading dialog'u kapat

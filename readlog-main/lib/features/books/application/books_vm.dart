@@ -30,6 +30,12 @@ class BooksVm extends StateNotifier<BooksState> {
     state = state.copyWith(items: items, isLoading: false);
   }
 
+  /// Reload from the (singleton) repository — used after a backup import so the
+  /// list reflects restored data without recreating the provider (T2.4).
+  Future<void> reload() async {
+    await _load();
+  }
+
   List<Book> byShelf(BookShelf shelf) {
     final books = state.items.where((b) => b.shelf == shelf).toList();
     books.sort((a, b) => a.order.compareTo(b.order));

@@ -332,22 +332,13 @@ Future<void> _handleDelete(BuildContext context, WidgetRef ref, String logId) as
     message: 'Bu okuma kaydını silmek istediğinize emin misiniz?\nBu işlem geri alınamaz.',
   );
   if (ok && context.mounted) {
-    // Önce log'u al (bookId için)
-    final log = await ref.read(readingLogsRepositoryProvider).getById(logId);
-    final bookId = log?.bookId;
-    
     await ref.read(readingLogsRepositoryProvider).delete(logId);
-    
-    // Provider'ları invalidate et
+
+    // T2.4: refresh the per-log detail provider and the list notifier; do NOT
+    // invalidate the singleton repository.
     ref.invalidate(readingLogProvider(logId));
-    ref.read(readingLogsProvider.notifier).reload();
-    if (bookId != null) {
-      // Okuma kayıtlarım ekranını güncelle - tüm bookId'ler için invalidate et
-      // FutureProvider.autoDispose olduğu için sayfa tekrar açıldığında otomatik yenilenecek
-      // Ancak manuel olarak da invalidate edebiliriz
-      ref.invalidate(readingLogsRepositoryProvider);
-    }
-    
+    await ref.read(readingLogsProvider.notifier).reload();
+
     if (context.mounted) {
       context.pop();
     }
