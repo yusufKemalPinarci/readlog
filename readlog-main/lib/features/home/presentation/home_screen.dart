@@ -335,15 +335,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       onMoveToShelf: (book, targetShelf) => vm.moveBookToShelf(book.id, targetShelf),
                       onReorder: (oldIndex, newIndex) => vm.reorderBooks(BookShelf.toRead, oldIndex, newIndex),
                       onTap: (b) => context.push(Routes.bookDetail(b.id)),
-                      onEdit: (b) => context.push(Routes.editBook(b.id)),
-                      onDelete: (b) async {
-                        await showDialog(
-                          context: context,
-                          builder: (context) => DeleteBookDialog(
-                            onConfirm: () => vm.deleteBook(b.id),
-                          ),
-                        );
-                      },
                       menuBuilder: (context, book) => [
                         PopupMenuItem(
                           value: _MenuAction.startReading,
@@ -364,7 +355,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             await vm.moveBookToShelf(book.id, BookShelf.reading);
                             return;
                           case _MenuAction.edit:
-                            context.push(Routes.editCompletedBook(book.id));
+                            // toRead → edit metadata screen (T1.10)
+                            context.push(Routes.editBook(book.id));
                             return;
                           case _MenuAction.delete:
                             await showDialog(
@@ -393,16 +385,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       onMoveToShelf: (book, targetShelf) => vm.moveBookToShelf(book.id, targetShelf),
                       onReorder: (oldIndex, newIndex) => vm.reorderBooks(BookShelf.reading, oldIndex, newIndex),
                       onTap: (b) => context.push(Routes.bookDetail(b.id)),
-                      onEdit: (b) => context.push(Routes.editBook(b.id)),
-                      onDelete: (b) async {
-                        await showDialog(
-                          context: context,
-                          builder: (context) => DeleteBookDialog(
-                            onConfirm: () => vm.deleteBook(b.id),
-                          ),
-                        );
-                      },
-                      onFinish: (b) => context.push(Routes.finishReadingFor(b.id), extra: {'isDirectFinish': true}),
                       onContinueReading: (b) => context.push(Routes.activeReadingFor(b.id)),
                       menuBuilder: (context, book) => [
                         PopupMenuItem(
@@ -428,7 +410,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             context.push(Routes.activeReadingFor(book.id));
                             return;
                           case _MenuAction.edit:
-                            context.push(Routes.editCompletedBook(book.id));
+                            // reading → edit metadata screen (T1.10)
+                            context.push(Routes.editBook(book.id));
                             return;
                           case _MenuAction.finishBook:
                             context.push(Routes.finishReadingFlow(book.id));
@@ -458,15 +441,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       onMoveToShelf: (book, targetShelf) => vm.moveBookToShelf(book.id, targetShelf),
                       onReorder: (oldIndex, newIndex) => vm.reorderBooks(BookShelf.read, oldIndex, newIndex),
                       onTap: (b) => context.push(Routes.bookDetail(b.id)),
-                      onEdit: (b) => context.push(Routes.editCompletedBook(b.id)),
-                      onDelete: (b) async {
-                        await showDialog(
-                          context: context,
-                          builder: (context) => DeleteBookDialog(
-                            onConfirm: () => vm.deleteBook(b.id),
-                          ),
-                        );
-                      },
                       menuBuilder: (context, book) => [
                         PopupMenuItem(
                           value: _MenuAction.edit,
@@ -648,9 +622,6 @@ class _BooksList extends StatefulWidget {
     required this.menuBuilder,
     required this.onMenuSelected,
     this.onTap,
-    this.onEdit,
-    this.onDelete,
-    this.onFinish,
     this.onContinueReading,
     this.isGridView = false,
     this.searchQuery = '',
@@ -664,9 +635,6 @@ class _BooksList extends StatefulWidget {
   final _MenuBuilder menuBuilder;
   final Future<void> Function(_MenuAction action, Book book) onMenuSelected;
   final void Function(Book book)? onTap;
-  final void Function(Book book)? onEdit;
-  final void Function(Book book)? onDelete;
-  final void Function(Book book)? onFinish;
   final void Function(Book book)? onContinueReading;
   final bool isGridView;
   final String searchQuery;
