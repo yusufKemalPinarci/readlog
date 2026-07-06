@@ -35,7 +35,7 @@ class DataBackupService {
       final books = _localStorage.loadBooks();
       final logs = _localStorage.loadReadingLogs();
       final profile = _localStorage.loadProfile();
-      final isDarkMode = _localStorage.loadThemeMode();
+      final themeMode = _localStorage.loadThemeModeString();
 
       // Dosya path'lerini relative yap ve dosyaları arşive ekle
       final processedBooks = await _processBookPaths(books, appDir, archive);
@@ -49,7 +49,8 @@ class DataBackupService {
         'readingLogs': processedLogs,
         'profile': processedProfile,
         'settings': {
-          'isDarkMode': isDarkMode,
+          // Canonical theme representation ('light'|'dark'|null=system).
+          'themeMode': themeMode,
         },
       };
 
@@ -255,13 +256,7 @@ class DataBackupService {
       await _localStorage.saveProfile(restoredProfile);
     }
 
-    final settings = backupData['settings'] as Map<String, dynamic>?;
-    if (settings != null) {
-      final isDarkMode = settings['isDarkMode'] as bool?;
-      if (isDarkMode != null) {
-        await _localStorage.saveThemeMode(isDarkMode);
-      }
-    }
+    _restoreThemeFromSettings(backupData['settings']);
 
     // Kitap ve log verilerini kaydet
     await _mergeAndSave(books, logs, replaceExisting: replaceExisting);
@@ -450,6 +445,22 @@ class DataBackupService {
 
       await _localStorage.saveBooks(mergedBooks);
       await _localStorage.saveReadingLogs(mergedLogs);
+    }
+  }
+
+  /// Yedekteki tema ayarını kanonik forma çevirip kaydeder (T1.6).
+  /// Yeni yedekler `themeMode` (string), eski yedekler `isDarkMode` (bool) taşır.
+  Future<void> _restoreThemeFromSettings(Object? settings) async {
+    if (settings is! Map<String, dynamic>) return;
+    String? mode;
+    final rawMode = settings['themeMode'];
+    if (rawMode is String) {
+      mode = rawMode;
+    } else if (settings['isDarkMode'] is bool) {
+      mode = (settings['isDarkMode'] as bool) ? 'dark' : 'light';
+    }
+    if (mode != null) {
+      await _localStorage.saveThemeModeString(mode);
     }
   }
 

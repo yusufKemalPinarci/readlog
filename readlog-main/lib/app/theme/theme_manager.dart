@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -24,7 +26,15 @@ class ThemeManager extends StateNotifier<ThemeMode> {
   static const _key = 'theme_mode';
 
   void _loadTheme() {
-    final saved = _prefs.getString(_key);
+    // T1.6: read defensively — the key may hold a legacy bool from an older
+    // build that wrote theme as a bool under this same key.
+    final Object? raw = _prefs.get(_key);
+    if (raw is bool) {
+      state = raw ? ThemeMode.dark : ThemeMode.light;
+      unawaited(setTheme(state)); // rewrite in canonical string form
+      return;
+    }
+    final saved = raw is String ? raw : null;
     if (saved == 'light') {
       state = ThemeMode.light;
     } else if (saved == 'dark') {

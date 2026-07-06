@@ -82,13 +82,29 @@ class LocalStorageService {
     await _prefs.remove(_themeModeKey);
   }
 
-  // Theme Mode
-  Future<void> saveThemeMode(bool isDark) async {
-    await _prefs.setBool(_themeModeKey, isDark);
+  // Theme Mode — canonical representation shared with ThemeManager.
+  //
+  // T1.6: the same `theme_mode` key used to be written as a bool here and as a
+  // String ('light'/'dark') by ThemeManager, colliding. Now this delegates to
+  // the string form: 'light' | 'dark', or absent for "system". Reads tolerate a
+  // legacy bool value written by older builds.
+  Future<void> saveThemeModeString(String? mode) async {
+    if (mode == 'light' || mode == 'dark') {
+      await _prefs.setString(_themeModeKey, mode!);
+    } else {
+      await _prefs.remove(_themeModeKey);
+    }
   }
 
-  bool loadThemeMode() {
-    return _prefs.getBool(_themeModeKey) ?? false; // Default to light mode
+  String? loadThemeModeString() {
+    final Object? raw = _prefs.get(_themeModeKey);
+    if (raw is String) {
+      return (raw == 'light' || raw == 'dark') ? raw : null;
+    }
+    if (raw is bool) {
+      return raw ? 'dark' : 'light'; // legacy migration tolerance
+    }
+    return null;
   }
 
   // Profile
