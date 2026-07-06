@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 class ImageStorageService {
@@ -20,7 +21,13 @@ class ImageStorageService {
     return '${imagesDir.path}/cover_$bookId.jpg';
   }
 
-  /// Resmi dosyaya kaydet (kopyala)
+  /// Resmi dosyaya kaydet (kopyala).
+  ///
+  /// T1.7: Eğer kaynak zaten hedef dosyaysa (kapak değişmeden kaydedilmişse)
+  /// hiçbir şey yapmadan mevcut yolu döndürür — eskiden hedefi silip aynı
+  /// dosyadan kopyalamaya çalışıp kapağı yok ediyordu. Aksi halde önce `.tmp`
+  /// dosyasına kopyalar, sonra yerine taşır; kopyalama yarıda kalırsa eski
+  /// dosya korunur.
   Future<String?> saveImage(String bookId, String sourcePath) async {
     try {
       final sourceFile = File(sourcePath);
@@ -29,15 +36,23 @@ class ImageStorageService {
       }
 
       final targetPath = await getImageFilePath(bookId);
+      if (p.canonicalize(sourcePath) == p.canonicalize(targetPath)) {
+        // Kaynak = hedef: dokunma, kapak zaten yerinde.
+        return targetPath;
+      }
+
+      final tmpPath = '$targetPath.tmp';
+      final tmpFile = File(tmpPath);
+      if (await tmpFile.exists()) {
+        await tmpFile.delete();
+      }
+      // Önce tam kopyayı temp'e al (kaynak/hedef bu noktaya kadar bozulmaz).
+      await sourceFile.copy(tmpPath);
       final targetFile = File(targetPath);
-      
-      // Eğer hedef dosya varsa önce sil
       if (await targetFile.exists()) {
         await targetFile.delete();
       }
-
-      // Kaynak dosyayı hedefe kopyala
-      await sourceFile.copy(targetPath);
+      await tmpFile.rename(targetPath);
       return targetPath;
     } catch (e) {
       return null;

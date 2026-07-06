@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 class ProfileImageStorageService {
@@ -20,7 +21,11 @@ class ProfileImageStorageService {
     return '${imagesDir.path}/avatar_$userId.jpg';
   }
 
-  /// Resmi dosyaya kaydet (kopyala)
+  /// Resmi dosyaya kaydet (kopyala).
+  ///
+  /// T1.7: Kaynak zaten hedefse dokunmadan yolu döndürür; aksi halde `.tmp`
+  /// üzerinden atomik olarak yerine taşır (kopyalama yarıda kalırsa eski
+  /// dosya korunur).
   Future<String?> saveImage(String userId, String sourcePath) async {
     try {
       final sourceFile = File(sourcePath);
@@ -29,15 +34,21 @@ class ProfileImageStorageService {
       }
 
       final targetPath = await getImageFilePath(userId);
+      if (p.canonicalize(sourcePath) == p.canonicalize(targetPath)) {
+        return targetPath;
+      }
+
+      final tmpPath = '$targetPath.tmp';
+      final tmpFile = File(tmpPath);
+      if (await tmpFile.exists()) {
+        await tmpFile.delete();
+      }
+      await sourceFile.copy(tmpPath);
       final targetFile = File(targetPath);
-      
-      // Eğer hedef dosya varsa önce sil
       if (await targetFile.exists()) {
         await targetFile.delete();
       }
-
-      // Kaynak dosyayı hedefe kopyala
-      await sourceFile.copy(targetPath);
+      await tmpFile.rename(targetPath);
       return targetPath;
     } catch (e) {
       return null;
