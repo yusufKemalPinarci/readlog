@@ -110,6 +110,25 @@ class AudioRecordingService {
     }
   }
 
+  /// Kaydı geçici olarak duraklat (dosyayı kapatmadan). T2.1: böylece devam
+  /// ettirildiğinde aynı dosyaya yazılır ve segmentler kaybolmaz.
+  Future<void> pauseRecording() async {
+    if (!_isRecording) return;
+    try {
+      await _recorder.pause();
+    } catch (_) {
+      // Duraklatma başarısız olursa kayıt durumunu bozma
+    }
+  }
+
+  /// Duraklatılmış kaydı aynı dosyaya devam ettir (T2.1).
+  Future<void> resumeRecording() async {
+    if (!_isRecording) return;
+    try {
+      await _recorder.resume();
+    } catch (_) {}
+  }
+
   /// Ses kaydını durdur
   Future<String?> stopRecording() async {
     if (!_isRecording) {
