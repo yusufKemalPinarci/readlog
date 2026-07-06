@@ -53,9 +53,10 @@ android {
             val keystorePropertiesFile = rootProject.file("key.properties")
             if (keystorePropertiesFile.exists()) {
                 signingConfig = signingConfigs.getByName("release")
-            } else {
-                signingConfig = signingConfigs.getByName("debug")
             }
+            // T2.22: NO debug-signing fallback. Without key.properties the release
+            // build stays unsigned and the task-graph guard below fails it loudly,
+            // so we never ship a release accidentally signed with the debug key.
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -66,6 +67,20 @@ android {
         debug {
             signingConfig = signingConfigs.getByName("debug")
         }
+    }
+}
+
+// T2.22: fail a release build loudly when the keystore config is missing —
+// but only when a release task is actually in the graph, so debug/profile
+// builds are unaffected.
+gradle.taskGraph.whenReady {
+    val buildingRelease = allTasks.any { it.name.contains("Release") }
+    val keystorePropertiesFile = rootProject.file("key.properties")
+    if (buildingRelease && !keystorePropertiesFile.exists()) {
+        throw GradleException(
+            "key.properties missing — release builds must be signed. " +
+                "Create android/key.properties pointing at a real keystore."
+        )
     }
 }
 

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  T2.23: Opt the app out of cloud backup and device-to-device transfer entirely.
+  The app's own export/import is the sanctioned backup path; user reading data
+  must not be silently copied to Google servers or another device.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+    </device-transfer>
+</data-extraction-rules>
