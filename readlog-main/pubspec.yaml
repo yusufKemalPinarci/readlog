@@ -53,6 +53,9 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
   flutter_launcher_icons: ^0.13.1
+  # For mocking platform channels in tests (image storage / path_provider).
+  path_provider_platform_interface: ^2.1.2
+  plugin_platform_interface: ^2.1.8
 
 flutter_launcher_icons:
   android: "ic_launcher"

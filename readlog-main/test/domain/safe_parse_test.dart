@@ -94,7 +94,7 @@ void main() {
 
   group('UserProfile.fromJson tolerant (T1.3)', () {
     test('missing fields fall back without throwing', () {
-      final p = UserProfile.fromJson({'name': 'X'});
+      final p = UserProfile.fromJson(const {'name': 'X'});
       expect(p.id, 'u1');
       expect(p.name, 'X');
       expect(p.dailyGoalMinutes, 45);
@@ -113,7 +113,7 @@ void main() {
       final repo = LocalBooksRepository(LocalStorageService(prefs));
       final books = await repo.list();
       // "NoId" skipped; "BadShelf" kept (shelf clamped).
-      expect(books.map((b) => b.id).toList()..sort(), ['1', '3']);
+      expect(books.map((b) => b.id).toList()..sort(), const ['1', '3']);
       expect(books.firstWhere((b) => b.id == '3').shelf, BookShelf.toRead);
     });
 
