@@ -50,27 +50,39 @@ class LocalBooksRepository implements BooksRepository {
   final LocalStorageService _storage;
   List<Book> _items = [];
 
+  /// True when storage exists but couldn't be decoded. The repo goes read-only
+  /// so a save can't overwrite (and wipe) the corrupt-but-present data (T1.4).
+  bool _corrupt = false;
+  bool get isCorrupt => _corrupt;
+
   void _init() {
     _reload();
   }
 
   void _reload() {
-    final storedData = _storage.loadBooks();
-    if (storedData.isNotEmpty) {
-      final parsed = <Book>[];
-      var skipped = 0;
-      for (final json in storedData) {
-        final book = Book.tryParse(json);
-        if (book != null) {
-          parsed.add(book);
-        } else {
-          skipped++;
+    try {
+      final storedData = _storage.loadBooks();
+      _corrupt = false;
+      if (storedData.isNotEmpty) {
+        final parsed = <Book>[];
+        var skipped = 0;
+        for (final json in storedData) {
+          final book = Book.tryParse(json);
+          if (book != null) {
+            parsed.add(book);
+          } else {
+            skipped++;
+          }
         }
+        if (skipped > 0) {
+          debugPrint('LocalBooksRepository: skipped $skipped unparseable book record(s).');
+        }
+        _items = parsed;
       }
-      if (skipped > 0) {
-        debugPrint('LocalBooksRepository: skipped $skipped unparseable book record(s).');
-      }
-      _items = parsed;
+    } on StorageCorruptionException catch (e) {
+      _corrupt = true;
+      debugPrint('LocalBooksRepository: storage corrupt, entering read-only. $e');
+      // Do NOT touch _items; never wipe the (backed-up) corrupt blob.
     }
   }
 
@@ -80,6 +92,10 @@ class LocalBooksRepository implements BooksRepository {
   }
 
   Future<void> _save() async {
+    if (_corrupt) {
+      debugPrint('LocalBooksRepository: refusing to save over corrupt storage.');
+      return;
+    }
     final booksJson = _items.map((b) => b.toJson()).toList();
     await _storage.saveBooks(booksJson);
   }

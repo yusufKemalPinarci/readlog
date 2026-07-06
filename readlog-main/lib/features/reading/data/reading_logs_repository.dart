@@ -201,27 +201,37 @@ class LocalReadingLogsRepository implements ReadingLogsRepository {
   final NoteStorageService _noteService;
   List<ReadingLog> _items = [];
 
+  /// True when storage exists but couldn't be decoded; repo goes read-only (T1.4).
+  bool _corrupt = false;
+  bool get isCorrupt => _corrupt;
+
   void _init() {
     _reload();
   }
 
   void _reload() {
-    final storedData = _storage.loadReadingLogs();
-    if (storedData.isNotEmpty) {
-      final parsed = <ReadingLog>[];
-      var skipped = 0;
-      for (final json in storedData) {
-        final log = ReadingLog.tryParse(json);
-        if (log != null) {
-          parsed.add(log);
-        } else {
-          skipped++;
+    try {
+      final storedData = _storage.loadReadingLogs();
+      _corrupt = false;
+      if (storedData.isNotEmpty) {
+        final parsed = <ReadingLog>[];
+        var skipped = 0;
+        for (final json in storedData) {
+          final log = ReadingLog.tryParse(json);
+          if (log != null) {
+            parsed.add(log);
+          } else {
+            skipped++;
+          }
         }
+        if (skipped > 0) {
+          debugPrint('LocalReadingLogsRepository: skipped $skipped unparseable log record(s).');
+        }
+        _items = parsed;
       }
-      if (skipped > 0) {
-        debugPrint('LocalReadingLogsRepository: skipped $skipped unparseable log record(s).');
-      }
-      _items = parsed;
+    } on StorageCorruptionException catch (e) {
+      _corrupt = true;
+      debugPrint('LocalReadingLogsRepository: storage corrupt, entering read-only. $e');
     }
   }
 
@@ -231,6 +241,10 @@ class LocalReadingLogsRepository implements ReadingLogsRepository {
   }
 
   Future<void> _save() async {
+    if (_corrupt) {
+      debugPrint('LocalReadingLogsRepository: refusing to save over corrupt storage.');
+      return;
+    }
     final logsJson = _items.map((l) => l.toJson()).toList();
     await _storage.saveReadingLogs(logsJson);
   }
