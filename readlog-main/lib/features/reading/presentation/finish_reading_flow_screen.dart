@@ -111,7 +111,7 @@ class _FinishReadingFlowScreenState extends ConsumerState<FinishReadingFlowScree
   }
 
   void _shareBookCompletion(String bookReview) {
-      SharePlus.instance.share(ShareParams(text: 'ReadLog ile bir kitabı daha bitirdim! İşte düşüncelerim: $bookReview'));
+      SharePlus.instance.share(ShareParams(text: 'Libris ile bir kitabı daha bitirdim! İşte düşüncelerim: $bookReview'));
   }
 
   @override

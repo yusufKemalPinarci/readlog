@@ -47,7 +47,7 @@ void main() async {
         // ColorPaletteManager provider'ını override et
         colorPaletteProvider.overrideWith((ref) => ColorPaletteManager(prefs)),
       ],
-      child: const ReadLogApp(),
+      child: const LibrisApp(),
     ),
   );
 }
