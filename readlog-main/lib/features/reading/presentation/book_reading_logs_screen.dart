@@ -47,8 +47,10 @@ class BookReadingLogsScreen extends ConsumerStatefulWidget {
 class _BookReadingLogsScreenState extends ConsumerState<BookReadingLogsScreen> {
   @override
   Widget build(BuildContext context) {
-    final booksVm = ref.watch(booksVmProvider.notifier);
-    final book = booksVm.byId(widget.bookId);
+    // T2.21: watch the state so the screen rebuilds when books finish loading;
+    // watching only the notifier would render stale/missing data.
+    ref.watch(booksVmProvider);
+    final book = ref.read(booksVmProvider.notifier).byId(widget.bookId);
     
     // Eğer filtrelenmiş loglar varsa onları kullan, yoksa tüm logları yükle
     final logsAsync = widget.filteredLogs != null

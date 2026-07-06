@@ -25,7 +25,8 @@ class ReadingLogDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final logAsync = ref.watch(readingLogProvider(logId));
-    final booksVm = ref.watch(booksVmProvider.notifier);
+    ref.watch(booksVmProvider); // T2.21: rebuild when books finish loading
+    final booksVm = ref.read(booksVmProvider.notifier);
     
     return logAsync.when(
       data: (log) {

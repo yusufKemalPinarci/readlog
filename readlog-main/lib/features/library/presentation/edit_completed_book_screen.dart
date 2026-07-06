@@ -13,8 +13,9 @@ import '../../books/domain/book.dart';
 import '../../../shared/services/image_storage_service.dart';
 
 final _bookProvider = FutureProvider.autoDispose.family<Book?, String>((ref, bookId) async {
-  final vm = ref.watch(booksVmProvider.notifier);
-  return vm.byId(bookId);
+  // T2.21: depend on the state so this recomputes when books finish loading.
+  ref.watch(booksVmProvider);
+  return ref.read(booksVmProvider.notifier).byId(bookId);
 });
 
 class EditCompletedBookScreen extends ConsumerStatefulWidget {

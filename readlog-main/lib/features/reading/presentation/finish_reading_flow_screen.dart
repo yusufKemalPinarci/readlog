@@ -226,12 +226,11 @@ class _FinishReadingFlowScreenState extends ConsumerState<FinishReadingFlowScree
                     _lastResult = result;
                   });
                    
+                  // T2.13: replace the stack so back-nav can't reach the stale
+                  // (already-saved) ActiveReadingScreen.
                   if (result.shouldShowStreak) {
-                    if (context.canPop()) context.pop();
-                    context.push(Routes.streak);
+                    context.go(Routes.streak);
                   } else {
-                    if (context.canPop()) context.pop();
-                    // "Devam Eden" sekmesine git (index 1)
                     context.go('${Routes.home}?tab=1');
                   }
                 } catch (e) {
@@ -284,11 +283,13 @@ class _FinishReadingFlowScreenState extends ConsumerState<FinishReadingFlowScree
                      );
                   }
 
-                  // Bitirme sonrası yönlendirme
+                  // Bitirme sonrası yönlendirme.
+                  // T2.13: replace the stack (go) instead of pop()+push() so the
+                  // now-saved ActiveReadingScreen underneath can't be reached via
+                  // back-nav and re-saved (duplicate logs).
                   if (mounted) {
-                    if (context.canPop()) context.pop();
                     if (result.shouldShowStreak) {
-                      context.push(Routes.streak);
+                      context.go(Routes.streak);
                     } else {
                       context.go('${Routes.home}?tab=1');
                     }

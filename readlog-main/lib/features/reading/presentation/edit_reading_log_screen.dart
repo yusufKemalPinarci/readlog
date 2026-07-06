@@ -715,13 +715,14 @@ class _AudioPlayerState extends State<_AudioPlayer> {
             _isPlaying = state.playing;
           });
           
-          // Bittiğinde baştan başlat
-          if (state.processingState == ProcessingState.completed && state.playing == false) {
+          // T2.16: on completion, stop and reset to the start (align with the
+          // detail screen). The old inverted condition auto-replayed the clip.
+          if (state.processingState == ProcessingState.completed && state.playing) {
+            await _audioPlayer.pause();
             await _audioPlayer.seek(Duration.zero);
-            await _audioPlayer.play();
             if (mounted) {
               setState(() {
-                _isPlaying = true;
+                _isPlaying = false;
                 _currentPosition = Duration.zero;
               });
             }
