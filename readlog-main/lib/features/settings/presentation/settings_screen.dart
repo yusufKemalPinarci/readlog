@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/router/app_router.dart';
 import '../../../app/theme/theme_manager.dart';
 import '../../../app/theme/theme_color_palette.dart';
 import '../../../shared/widgets/book_scaffold.dart';
@@ -105,6 +106,14 @@ class SettingsScreen extends ConsumerWidget {
                       );
                     },
                   ),
+                  // T1.11: entry to the daily goal screen
+                  ListTile(
+                    leading: Icon(Icons.flag_outlined, color: Theme.of(context).colorScheme.primary),
+                    title: const Text('Günlük Hedef'),
+                    trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                    onTap: () => context.push(Routes.dailyGoal),
+                  ),
+                  const Divider(height: 1),
                   // Renk Paleti Seçimi
                   Consumer(
                     builder: (context, ref, child) {

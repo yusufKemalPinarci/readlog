@@ -15,7 +15,7 @@ class LocalProfileRepository implements ProfileRepository {
     id: 'u1',
     name: '',
     username: '',
-    dailyGoalMinutes: 0,
+    dailyGoalMinutes: 45, // T1.11: match UserProfile's default; 0 crashed the goal slider
   );
 
   @override

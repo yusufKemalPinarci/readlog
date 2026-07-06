@@ -234,7 +234,78 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         );
                      },
                    ),
-                   
+
+                   const SizedBox(height: 16),
+
+                   // T1.11: daily goal progress + entry point to the goal screen.
+                   Builder(
+                     builder: (context) {
+                       final now = DateTime.now();
+                       final todayStart = DateTime(now.year, now.month, now.day);
+                       final todayEnd = todayStart.add(const Duration(days: 1));
+                       final todaySeconds = logs
+                           .where((l) => !l.date.isBefore(todayStart) && l.date.isBefore(todayEnd))
+                           .fold<int>(0, (s, l) => s + l.effectiveDurationSeconds);
+                       final todayMinutes = todaySeconds ~/ 60;
+                       final goal = profileAsync.valueOrNull?.dailyGoalMinutes ?? 45;
+                       final progress = goal > 0 ? (todayMinutes / goal).clamp(0.0, 1.0) : 0.0;
+
+                       return Material(
+                         color: Colors.transparent,
+                         child: InkWell(
+                           onTap: () => context.push(Routes.dailyGoal),
+                           borderRadius: BorderRadius.circular(20),
+                           child: Container(
+                             padding: const EdgeInsets.all(16),
+                             decoration: BoxDecoration(
+                               color: Theme.of(context).cardColor,
+                               borderRadius: BorderRadius.circular(20),
+                               border: Border.all(
+                                 color: Theme.of(context).dividerColor.withValues(alpha: 0.5),
+                                 width: 1,
+                               ),
+                             ),
+                             child: Column(
+                               crossAxisAlignment: CrossAxisAlignment.start,
+                               children: [
+                                 Row(
+                                   children: [
+                                     Icon(Icons.flag_rounded, size: 20, color: Theme.of(context).colorScheme.primary),
+                                     const SizedBox(width: 8),
+                                     Text(
+                                       'Günlük Hedef',
+                                       style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                                     ),
+                                     const Spacer(),
+                                     Text(
+                                       '$todayMinutes / $goal dk',
+                                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                         fontWeight: FontWeight.w700,
+                                         color: Theme.of(context).colorScheme.primary,
+                                       ),
+                                     ),
+                                     const SizedBox(width: 4),
+                                     Icon(Icons.chevron_right_rounded,
+                                         size: 20, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
+                                   ],
+                                 ),
+                                 const SizedBox(height: 12),
+                                 ClipRRect(
+                                   borderRadius: BorderRadius.circular(8),
+                                   child: LinearProgressIndicator(
+                                     value: progress,
+                                     minHeight: 8,
+                                     backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
+                                   ),
+                                 ),
+                               ],
+                             ),
+                           ),
+                         ),
+                       );
+                     },
+                   ),
+
                    const SizedBox(height: 32),
 
                    // Period Selector
