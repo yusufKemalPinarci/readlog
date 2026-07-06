@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'app/app.dart';
-import 'shared/services/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'shared/services/local_storage_service.dart';
 import 'app/theme/theme_manager.dart';
@@ -25,11 +24,10 @@ void main() async {
 
   // SharedPreferences'ı başlat
   final prefs = await SharedPreferences.getInstance();
-  
-  // Bildirim servisini başlat
-  final notificationService = NotificationService();
-  await notificationService.initialize();
-  await notificationService.requestPermission();
+
+  // T2.26: the notification service is initialized lazily by the notification
+  // settings notifier only when reminders are enabled, and POST_NOTIFICATIONS is
+  // requested at that opt-in moment — not on first frame. So no init here.
 
   // LocalStorageService'i başlat
   final localStorageService = LocalStorageService(prefs);
