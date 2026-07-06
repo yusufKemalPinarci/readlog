@@ -8,6 +8,9 @@ import '../../books/application/books_vm.dart';
 import '../domain/reading_log.dart';
 import 'reading_providers.dart';
 
+/// Sentinel for [FinishReadingState.copyWith] so nullable fields can be cleared.
+const Object _unset = Object();
+
 @immutable
 class FinishReadingState {
   final int minutes;
@@ -44,31 +47,31 @@ class FinishReadingState {
 
   FinishReadingState copyWith({
     int? minutes,
-    int? durationSeconds,
-    int? pageAtEnd,
-    String? note,
-    String? audioFilePath,
-    String? noteFilePath,
-    String? title,
+    Object? durationSeconds = _unset,
+    Object? pageAtEnd = _unset,
+    Object? note = _unset,
+    Object? audioFilePath = _unset,
+    Object? noteFilePath = _unset,
+    Object? title = _unset,
     bool? isSaving,
-    String? error,
-    String? bookReview,
-    String? finalTotalMinutes,
-    int? rating,
+    Object? error = _unset,
+    Object? bookReview = _unset,
+    Object? finalTotalMinutes = _unset,
+    Object? rating = _unset,
   }) {
     return FinishReadingState(
       minutes: minutes ?? this.minutes,
-      durationSeconds: durationSeconds ?? this.durationSeconds,
-      pageAtEnd: pageAtEnd ?? this.pageAtEnd,
-      note: note ?? this.note,
-      audioFilePath: audioFilePath ?? this.audioFilePath,
-      noteFilePath: noteFilePath ?? this.noteFilePath,
-      title: title ?? this.title,
+      durationSeconds: identical(durationSeconds, _unset) ? this.durationSeconds : durationSeconds as int?,
+      pageAtEnd: identical(pageAtEnd, _unset) ? this.pageAtEnd : pageAtEnd as int?,
+      note: identical(note, _unset) ? this.note : note as String?,
+      audioFilePath: identical(audioFilePath, _unset) ? this.audioFilePath : audioFilePath as String?,
+      noteFilePath: identical(noteFilePath, _unset) ? this.noteFilePath : noteFilePath as String?,
+      title: identical(title, _unset) ? this.title : title as String?,
       isSaving: isSaving ?? this.isSaving,
-      error: error ?? this.error,
-      bookReview: bookReview ?? this.bookReview,
-      finalTotalMinutes: finalTotalMinutes ?? this.finalTotalMinutes,
-      rating: rating ?? this.rating,
+      error: identical(error, _unset) ? this.error : error as String?,
+      bookReview: identical(bookReview, _unset) ? this.bookReview : bookReview as String?,
+      finalTotalMinutes: identical(finalTotalMinutes, _unset) ? this.finalTotalMinutes : finalTotalMinutes as String?,
+      rating: identical(rating, _unset) ? this.rating : rating as int?,
     );
   }
 }

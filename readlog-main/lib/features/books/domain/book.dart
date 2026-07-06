@@ -1,5 +1,9 @@
 import 'package:flutter/foundation.dart';
 
+/// Sentinel for [Book.copyWith] so nullable fields can be explicitly cleared.
+/// Omitting a field keeps the current value; passing `null` sets it to null.
+const Object _unset = Object();
+
 enum BookShelf {
   toRead,
   reading,
@@ -55,15 +59,15 @@ class Book {
     String? author,
     int? totalPages,
     BookShelf? shelf,
-    int? currentPage,
-    int? totalMinutes,
-    String? category,
+    Object? currentPage = _unset,
+    Object? totalMinutes = _unset,
+    Object? category = _unset,
     int? readCount,
     int? order,
-    String? coverImagePath,
-    String? review,
-    int? rating,
-    int? finalReadingTimeMinutes,
+    Object? coverImagePath = _unset,
+    Object? review = _unset,
+    Object? rating = _unset,
+    Object? finalReadingTimeMinutes = _unset,
   }) {
     return Book(
       id: id ?? this.id,
@@ -71,15 +75,16 @@ class Book {
       author: author ?? this.author,
       totalPages: totalPages ?? this.totalPages,
       shelf: shelf ?? this.shelf,
-      currentPage: currentPage ?? this.currentPage,
-      totalMinutes: totalMinutes ?? this.totalMinutes,
-      category: category ?? this.category,
+      currentPage: identical(currentPage, _unset) ? this.currentPage : currentPage as int?,
+      totalMinutes: identical(totalMinutes, _unset) ? this.totalMinutes : totalMinutes as int?,
+      category: identical(category, _unset) ? this.category : category as String?,
       readCount: readCount ?? this.readCount,
       order: order ?? this.order,
-      coverImagePath: coverImagePath ?? this.coverImagePath,
-      review: review ?? this.review,
-      rating: rating ?? this.rating,
-      finalReadingTimeMinutes: finalReadingTimeMinutes ?? this.finalReadingTimeMinutes,
+      coverImagePath: identical(coverImagePath, _unset) ? this.coverImagePath : coverImagePath as String?,
+      review: identical(review, _unset) ? this.review : review as String?,
+      rating: identical(rating, _unset) ? this.rating : rating as int?,
+      finalReadingTimeMinutes:
+          identical(finalReadingTimeMinutes, _unset) ? this.finalReadingTimeMinutes : finalReadingTimeMinutes as int?,
     );
   }
   Map<String, dynamic> toJson() {

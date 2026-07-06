@@ -1,5 +1,9 @@
 import 'package:flutter/foundation.dart';
 
+/// Sentinel for [ReadingLog.copyWith] so nullable fields can be explicitly
+/// cleared. Omitting a field keeps the current value; passing `null` sets null.
+const Object _unset = Object();
+
 @immutable
 class ReadingLog {
   const ReadingLog({
@@ -35,11 +39,11 @@ class ReadingLog {
     DateTime? date,
     int? minutes,
     int? pageAtEnd,
-    int? durationSeconds,
-    String? title,
-    String? note,
-    String? audioFilePath,
-    String? noteFilePath,
+    Object? durationSeconds = _unset,
+    Object? title = _unset,
+    Object? note = _unset,
+    Object? audioFilePath = _unset,
+    Object? noteFilePath = _unset,
   }) {
     return ReadingLog(
       id: id ?? this.id,
@@ -47,11 +51,11 @@ class ReadingLog {
       date: date ?? this.date,
       minutes: minutes ?? this.minutes,
       pageAtEnd: pageAtEnd ?? this.pageAtEnd,
-      durationSeconds: durationSeconds ?? this.durationSeconds,
-      title: title ?? this.title,
-      note: note ?? this.note,
-      audioFilePath: audioFilePath ?? this.audioFilePath,
-      noteFilePath: noteFilePath ?? this.noteFilePath,
+      durationSeconds: identical(durationSeconds, _unset) ? this.durationSeconds : durationSeconds as int?,
+      title: identical(title, _unset) ? this.title : title as String?,
+      note: identical(note, _unset) ? this.note : note as String?,
+      audioFilePath: identical(audioFilePath, _unset) ? this.audioFilePath : audioFilePath as String?,
+      noteFilePath: identical(noteFilePath, _unset) ? this.noteFilePath : noteFilePath as String?,
     );
   }
   Map<String, dynamic> toJson() {

@@ -296,13 +296,19 @@ class _AddBookScreenState extends ConsumerState<AddBookScreen> {
     final vm = ref.read(booksVmProvider.notifier);
     final id = widget.bookId ?? DateTime.now().microsecondsSinceEpoch.toString();
 
-    // Resmi kaydet
+    // Resmi kaydet.
+    // T1.8: copyWith artık null'ı "temizle" olarak yorumluyor. Kapak
+    // değişmediyse mevcut yolu geri gönder; kaldırıldıysa açıkça null gönder.
     String? savedImagePath;
     if (_selectedImage != null) {
       savedImagePath = await _imageService.saveImage(id, _selectedImage!.path);
     } else if (_coverImagePath == null && widget.bookId != null) {
       // Eğer resim kaldırıldıysa (edit modunda), eski resmi sil
       await _imageService.deleteImage(id);
+      savedImagePath = null;
+    } else {
+      // Kapak değişmedi: mevcut yolu koru
+      savedImagePath = _coverImagePath;
     }
 
     if (widget.bookId == null) {
