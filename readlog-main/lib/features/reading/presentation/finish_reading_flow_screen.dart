@@ -305,7 +305,7 @@ class _FinishReadingFlowScreenState extends ConsumerState<FinishReadingFlowScree
              onNoteChanged: vm.setNote,
              onImageSelected: vm.setNoteFilePath,
              imagePath: state.noteFilePath,
-             onHoursChanged: vm.setFinalTotalHours,
+             onHoursChanged: vm.setFinalTotalMinutes,
              onRatingChanged: vm.setRating,
              initialMinutes: state.minutes,
              showTimeInput: widget.isDirectFinish,

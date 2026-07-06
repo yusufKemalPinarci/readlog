@@ -20,7 +20,11 @@ class FinishReadingState {
   final bool isSaving;
   final String? error;
   final String? bookReview;
-  final String? finalTotalHours;
+
+  /// Book's cumulative total reading time in MINUTES (as entered/prefilled).
+  /// Despite historical naming, this has always held minutes — the finish
+  /// screen sends `(hours * 60) + minutes` here.
+  final String? finalTotalMinutes;
   final int? rating; // 1-5 stars
 
   const FinishReadingState({
@@ -34,7 +38,7 @@ class FinishReadingState {
     this.isSaving = false,
     this.error,
     this.bookReview,
-    this.finalTotalHours,
+    this.finalTotalMinutes,
     this.rating,
   });
 
@@ -49,7 +53,7 @@ class FinishReadingState {
     bool? isSaving,
     String? error,
     String? bookReview,
-    String? finalTotalHours,
+    String? finalTotalMinutes,
     int? rating,
   }) {
     return FinishReadingState(
@@ -63,7 +67,7 @@ class FinishReadingState {
       isSaving: isSaving ?? this.isSaving,
       error: error ?? this.error,
       bookReview: bookReview ?? this.bookReview,
-      finalTotalHours: finalTotalHours ?? this.finalTotalHours,
+      finalTotalMinutes: finalTotalMinutes ?? this.finalTotalMinutes,
       rating: rating ?? this.rating,
     );
   }
@@ -91,16 +95,22 @@ class FinishReadingVm extends AutoDisposeFamilyNotifier<FinishReadingState, Stri
   void setNoteFilePath(String? path) => state = state.copyWith(noteFilePath: path);
   void setTitle(String title) => state = state.copyWith(title: title);
   void setBookReview(String review) => state = state.copyWith(bookReview: review);
-  void setFinalTotalHours(String hours) => state = state.copyWith(finalTotalHours: hours);
+  void setFinalTotalMinutes(String minutes) => state = state.copyWith(finalTotalMinutes: minutes);
   void setRating(int? rating) => state = state.copyWith(rating: rating);
 
-  /// Kitaba ait tüm okuma loglarının sürelerini toplar ve state'e yazar
+  /// Kitaba ait tüm okuma loglarının sürelerini toplar ve "toplam süre" alanına
+  /// (finalTotalMinutes) ön-değer olarak yazar.
+  ///
+  /// T1.2: Bu toplamı `minutes`/`durationSeconds` alanlarına YAZMAZ; aksi halde
+  /// direkt bitirmede bu tarihsel toplam yeni bir log olarak tekrar kaydedilip
+  /// çift sayıma yol açardı. Yeni log yalnızca bu oturumun süresini taşır.
   Future<void> loadTotalMinutesForBook() async {
     final repo = ref.read(readingLogsRepositoryProvider);
     final logs = await repo.listByBookId(arg);
     final totalSeconds = logs.fold<int>(0, (sum, log) => sum + log.effectiveDurationSeconds);
-    if (totalSeconds > 0) {
-      state = state.copyWith(minutes: totalSeconds ~/ 60, durationSeconds: totalSeconds);
+    final totalMinutes = totalSeconds ~/ 60;
+    if (totalMinutes > 0) {
+      state = state.copyWith(finalTotalMinutes: totalMinutes.toString());
     }
   }
 
@@ -180,12 +190,14 @@ class FinishReadingVm extends AutoDisposeFamilyNotifier<FinishReadingState, Stri
       // Eğer kitap tamamlandıysa, kitabı okunduya al ve review bilgilerini kaydet
       if (isBookCompleted) {
         
-        // Varsa review ve total minutes bilgilerini de güncelle
+        // Varsa review ve total minutes bilgilerini de güncelle.
+        // T1.1: finalTotalMinutes ekrandan zaten DAKİKA olarak gelir; burada
+        // 60 ile çarpmak 60x şişmeye yol açıyordu. Doğrudan dakika olarak oku.
         int? finalMinutes;
-        if (state.finalTotalHours != null && state.finalTotalHours!.isNotEmpty) {
-           final hours = double.tryParse(state.finalTotalHours!.replaceAll(',', '.'));
-           if (hours != null) {
-             finalMinutes = (hours * 60).round();
+        if (state.finalTotalMinutes != null && state.finalTotalMinutes!.trim().isNotEmpty) {
+           final parsed = double.tryParse(state.finalTotalMinutes!.replaceAll(',', '.'));
+           if (parsed != null) {
+             finalMinutes = parsed.round();
            }
         }
         // Timer'dan gelen süreyi fallback olarak kullan
