@@ -196,15 +196,13 @@ class _EditReadingLogScreenState extends ConsumerState<EditReadingLogScreen> {
       }
     }
 
-    final updated = ReadingLog(
-      id: existing.id,
-      bookId: existing.bookId,
+    // T2.2: build from `existing` so no field (notably `title`) is silently
+    // dropped; only the edited fields are overridden.
+    final updated = existing.copyWith(
       date: _selectedDate!,
       minutes: _minutes!,
       durationSeconds: _durationSeconds,
-      pageAtEnd: existing.pageAtEnd,
       note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
-      audioFilePath: existing.audioFilePath,
       noteFilePath: persistentImagePath,
     );
 
