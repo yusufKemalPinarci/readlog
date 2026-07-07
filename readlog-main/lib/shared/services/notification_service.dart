@@ -18,10 +18,18 @@ class NotificationService {
   Future<void> initialize() async {
     if (_initialized) return;
 
-    // Timezone verilerini yükle ve cihaz yerel saatini ayarla
+    // Timezone verilerini yükle ve cihaz yerel saatini ayarla.
+    // T2.26: don't let an unknown/failed device timezone crash init — fall back
+    // to UTC so the rest of initialization (and the app) keeps working.
     tz.initializeTimeZones();
-    final localTimezone = await FlutterTimezone.getLocalTimezone();
-    tz.setLocalLocation(tz.getLocation(localTimezone.identifier));
+    try {
+      final localTimezone = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(localTimezone.identifier));
+    } catch (_) {
+      try {
+        tz.setLocalLocation(tz.getLocation('UTC'));
+      } catch (_) {}
+    }
 
     // Android ayarları
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -96,9 +104,18 @@ class NotificationService {
       minute,
     );
 
-    // Eğer zaman geçmişse, yarın için ayarla
+    // Eğer zaman geçmişse, yarın için ayarla.
+    // T2.26: rebuild from calendar components rather than add(Duration(days:1)),
+    // which would land on the wrong wall-clock time across a DST transition.
     if (scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
+      scheduledDate = tz.TZDateTime(
+        tz.local,
+        now.year,
+        now.month,
+        now.day + 1,
+        hour,
+        minute,
+      );
     }
 
     return scheduledDate;

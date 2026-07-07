@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/utils/image_helper.dart';
 import 'package:go_router/go_router.dart';
@@ -111,7 +112,7 @@ class _FinishReadingFlowScreenState extends ConsumerState<FinishReadingFlowScree
   }
 
   void _shareBookCompletion(String bookReview) {
-      SharePlus.instance.share(ShareParams(text: 'ReadLog ile bir kitabı daha bitirdim! İşte düşüncelerim: $bookReview'));
+      SharePlus.instance.share(ShareParams(text: 'Libris ile bir kitabı daha bitirdim! İşte düşüncelerim: $bookReview'));
   }
 
   @override
@@ -220,22 +221,21 @@ class _FinishReadingFlowScreenState extends ConsumerState<FinishReadingFlowScree
                 // Kitap bitmiyor, kaydet ve çık
                 try {
                   final result = await vm.saveAndMarkRead();
-                  if (!mounted) return;
-                  
+                  if (!context.mounted) return;
+
                   setState(() {
                     _lastResult = result;
                   });
-                   
+
+                  // T2.13: replace the stack so back-nav can't reach the stale
+                  // (already-saved) ActiveReadingScreen.
                   if (result.shouldShowStreak) {
-                    if (context.canPop()) context.pop();
-                    context.push(Routes.streak);
+                    context.go(Routes.streak);
                   } else {
-                    if (context.canPop()) context.pop();
-                    // "Devam Eden" sekmesine git (index 1)
                     context.go('${Routes.home}?tab=1');
                   }
                 } catch (e) {
-                   if (mounted) {
+                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Hata: $e')),
                     );
@@ -252,12 +252,12 @@ class _FinishReadingFlowScreenState extends ConsumerState<FinishReadingFlowScree
              onSave: () async {
                try {
                   final result = await vm.saveAndMarkRead();
-                  if (!mounted) return;
-                  
+                  if (!context.mounted) return;
+
                   setState(() {
                     _lastResult = result;
                   });
-                  
+
                   if (result.isBookCompleted) {
                      _confettiController.play();
                      
@@ -284,17 +284,19 @@ class _FinishReadingFlowScreenState extends ConsumerState<FinishReadingFlowScree
                      );
                   }
 
-                  // Bitirme sonrası yönlendirme
-                  if (mounted) {
-                    if (context.canPop()) context.pop();
+                  // Bitirme sonrası yönlendirme.
+                  // T2.13: replace the stack (go) instead of pop()+push() so the
+                  // now-saved ActiveReadingScreen underneath can't be reached via
+                  // back-nav and re-saved (duplicate logs).
+                  if (context.mounted) {
                     if (result.shouldShowStreak) {
-                      context.push(Routes.streak);
+                      context.go(Routes.streak);
                     } else {
                       context.go('${Routes.home}?tab=1');
                     }
                   }
                } catch (e) {
-                  if (mounted) {
+                  if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Hata: $e')),
                     );
@@ -305,7 +307,7 @@ class _FinishReadingFlowScreenState extends ConsumerState<FinishReadingFlowScree
              onNoteChanged: vm.setNote,
              onImageSelected: vm.setNoteFilePath,
              imagePath: state.noteFilePath,
-             onHoursChanged: vm.setFinalTotalHours,
+             onHoursChanged: vm.setFinalTotalMinutes,
              onRatingChanged: vm.setRating,
              initialMinutes: state.minutes,
              showTimeInput: widget.isDirectFinish,
@@ -542,6 +544,7 @@ class _ReviewStepState extends State<_ReviewStep> {
                       child: TextField(
                         controller: _hoursCtrl,
                         keyboardType: const TextInputType.numberWithOptions(decimal: false),
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly], // T4.6
                         style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
                         decoration: const InputDecoration(
                           border: InputBorder.none,
@@ -569,6 +572,7 @@ class _ReviewStepState extends State<_ReviewStep> {
                       child: TextField(
                         controller: _minutesCtrl,
                         keyboardType: const TextInputType.numberWithOptions(decimal: false),
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly], // T4.6
                         style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
                         decoration: const InputDecoration(
                           border: InputBorder.none,
@@ -927,8 +931,6 @@ class _NoteEditor extends StatefulWidget {
 }
 
 class _NoteEditorState extends State<_NoteEditor> {
-  bool _isBold = false;
-  bool _isItalic = false;
 
   Future<void> _pickImage() async {
     final source = await showModalBottomSheet<ImageSource>(
@@ -992,27 +994,12 @@ class _NoteEditorState extends State<_NoteEditor> {
             color: Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(12),
           ),
+          // T4.15: the bold/italic toggles only restyled the whole input field
+          // and never persisted (notes are plain text), so they're removed
+          // rather than pretending to offer rich-text formatting.
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _ToolbarButton(
-                icon: Icons.format_bold,
-                isActive: _isBold,
-                onPressed: () {
-                  setState(() {
-                    _isBold = !_isBold;
-                  });
-                },
-              ),
-              _ToolbarButton(
-                icon: Icons.format_italic,
-                isActive: _isItalic,
-                onPressed: () {
-                  setState(() {
-                    _isItalic = !_isItalic;
-                  });
-                },
-              ),
               _ToolbarButton(
                 icon: Icons.add_photo_alternate_outlined,
                 isActive: widget.imagePath != null,
@@ -1068,8 +1055,6 @@ class _NoteEditorState extends State<_NoteEditor> {
                   fontSize: 16,
                   height: 1.8,
                   color: Theme.of(context).textTheme.bodyLarge?.color,
-                  fontWeight: _isBold ? FontWeight.bold : FontWeight.normal,
-                  fontStyle: _isItalic ? FontStyle.italic : FontStyle.normal,
                 ),
                 decoration: InputDecoration(
                   hintText: 'Aklında kalan bir cümle, bir düşünce ya da bir his...',
@@ -1209,7 +1194,7 @@ class _CongratsStep extends StatelessWidget {
   }
 }
 
-class _PageStep extends ConsumerWidget {
+class _PageStep extends ConsumerStatefulWidget {
   const _PageStep({
     required this.totalPages,
     required this.controller,
@@ -1223,7 +1208,34 @@ class _PageStep extends ConsumerWidget {
   final String bookId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_PageStep> createState() => _PageStepState();
+}
+
+class _PageStepState extends ConsumerState<_PageStep> {
+  // T2.20: create the wheel controller once. It used to be rebuilt inline on
+  // every rebuild, leaking controllers and snapping the wheel back mid-fling.
+  late final FixedExtentScrollController _wheelController;
+
+  @override
+  void initState() {
+    super.initState();
+    _wheelController = FixedExtentScrollController(
+      initialItem: (int.tryParse(widget.controller.text) ?? 0).clamp(0, widget.totalPages),
+    );
+  }
+
+  @override
+  void dispose() {
+    _wheelController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final totalPages = widget.totalPages;
+    final controller = widget.controller;
+    final onSave = widget.onSave;
+    final bookId = widget.bookId;
     final state = ref.watch(finishReadingVmProvider(bookId));
     final isSaving = state.isSaving;
 
@@ -1285,9 +1297,7 @@ class _PageStep extends ConsumerWidget {
                               SizedBox(
                                 height: 200,
                                 child: ListWheelScrollView.useDelegate(
-                                  controller: FixedExtentScrollController(
-                                    initialItem: int.tryParse(controller.text) ?? 0,
-                                  ),
+                                  controller: _wheelController,
                                   itemExtent: 50,
                                   perspective: 0.005,
                                   diameterRatio: 1.5,

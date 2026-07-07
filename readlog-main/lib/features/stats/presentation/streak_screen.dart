@@ -53,7 +53,8 @@ class StreakScreen extends ConsumerWidget {
                       children: [
                         const SizedBox(height: 20),
                         Text(
-                          'Tebrikler!',
+                          // T4.15: only congratulate when there's actually a streak.
+                          currentStreak > 0 ? 'Tebrikler!' : 'Okuma Serin',
                           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                             color: onPrimary,
                             fontWeight: FontWeight.w900,
@@ -63,7 +64,7 @@ class StreakScreen extends ConsumerWidget {
                         Text(
                           currentStreak > 0
                               ? 'Güncel Okuma Serisi'
-                              : 'Okuma Serisi',
+                              : 'Bugün bir seri başlat!',
                           style: TextStyle(
                             color: onPrimary.withValues(alpha: 0.9),
                             fontSize: 18,

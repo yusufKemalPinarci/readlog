@@ -6,7 +6,8 @@
     <!-- Depolama izinleri (Android 13+ için) -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <!-- T2.24: READ_MEDIA_AUDIO removed — recordings live in the app-private
+         documents dir, so no media-audio permission is needed. -->
     <!-- Kamera ve galeri izinleri -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
@@ -19,6 +20,10 @@
         android:label="Libris"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        tools:replace="android:allowBackup"
         android:enableOnBackInvokedCallback="true">
         <activity
             android:name=".MainActivity"

@@ -1,11 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'theme_color_palette.dart';
 
 class AppTheme {
   static const Color _danger = Color(0xFFE74C3C);
+
+  // T2.25: the privacy policy forbids runtime font fetching and the Crimson Text
+  // TTFs are not bundled, so the app uses the system font (no network calls).
+  // To restore Crimson Text: drop the TTFs into assets/fonts/, declare them in
+  // pubspec, and set _fontFamily to 'CrimsonText'.
+  static const String? _fontFamily = null;
+
+  static TextStyle _font({double? fontSize, FontWeight? fontWeight, Color? color}) {
+    return TextStyle(
+      fontFamily: _fontFamily,
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+    );
+  }
 
   static ThemeData light(ColorPalette palette) {
     final seedColor = palette.seedColor;
@@ -22,7 +36,8 @@ class AppTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: const Color(0xFFFAF8F5),
       splashFactory: InkSparkle.splashFactory,
-      textTheme: GoogleFonts.crimsonTextTextTheme().apply(
+      textTheme: ThemeData.light().textTheme.apply(
+        fontFamily: _fontFamily,
         bodyColor: const Color(0xFF1A1A2E),
         displayColor: const Color(0xFF1A1A2E),
       ),
@@ -32,7 +47,7 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         systemOverlayStyle: SystemUiOverlayStyle.dark,
-        titleTextStyle: GoogleFonts.crimsonText(
+        titleTextStyle: _font(
           fontSize: 24,
           fontWeight: FontWeight.bold,
           color: const Color(0xFF1A1A2E),
@@ -49,7 +64,7 @@ class AppTheme {
       dialogTheme: DialogThemeData(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        titleTextStyle: GoogleFonts.crimsonText(
+        titleTextStyle: _font(
           fontSize: 22,
           fontWeight: FontWeight.bold,
           color: const Color(0xFF1A1A2E),
@@ -78,7 +93,7 @@ class AppTheme {
         style: FilledButton.styleFrom(
           backgroundColor: colorScheme.primary,
           foregroundColor: colorScheme.onPrimary,
-          textStyle: GoogleFonts.crimsonText(fontWeight: FontWeight.w700, fontSize: 16),
+          textStyle: _font(fontWeight: FontWeight.w700, fontSize: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           elevation: 0,
@@ -87,7 +102,7 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: colorScheme.primary,
-          textStyle: GoogleFonts.crimsonText(fontWeight: FontWeight.w700, fontSize: 16),
+          textStyle: _font(fontWeight: FontWeight.w700, fontSize: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           side: BorderSide(color: colorScheme.primary.withValues(alpha: 0.4)),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
@@ -96,14 +111,14 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: colorScheme.primary,
-          textStyle: GoogleFonts.crimsonText(fontWeight: FontWeight.w700, fontSize: 16),
+          textStyle: _font(fontWeight: FontWeight.w700, fontSize: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: const Color(0xFFF5F3EE),
-        hintStyle: GoogleFonts.crimsonText(color: Colors.black38),
+        hintStyle: _font(color: Colors.black38),
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
@@ -151,14 +166,14 @@ class AppTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: const Color(0xFF0F0F11),
       splashFactory: InkSparkle.splashFactory,
-      textTheme: GoogleFonts.crimsonTextTextTheme(ThemeData.dark().textTheme),
+      textTheme: ThemeData.dark().textTheme.apply(fontFamily: _fontFamily),
       appBarTheme: AppBarTheme(
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
         systemOverlayStyle: SystemUiOverlayStyle.light,
-        titleTextStyle: GoogleFonts.crimsonText(
+        titleTextStyle: _font(
           fontSize: 24,
           fontWeight: FontWeight.bold,
           color: const Color(0xFFEAEAEA),
@@ -175,7 +190,7 @@ class AppTheme {
       dialogTheme: DialogThemeData(
         backgroundColor: const Color(0xFF1E1E22),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        titleTextStyle: GoogleFonts.crimsonText(
+        titleTextStyle: _font(
           fontSize: 22,
           fontWeight: FontWeight.bold,
           color: const Color(0xFFEAEAEA),
@@ -205,7 +220,7 @@ class AppTheme {
         style: FilledButton.styleFrom(
           backgroundColor: colorScheme.primary,
           foregroundColor: colorScheme.onPrimary,
-          textStyle: GoogleFonts.crimsonText(fontWeight: FontWeight.w700, fontSize: 16),
+          textStyle: _font(fontWeight: FontWeight.w700, fontSize: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           elevation: 0,
@@ -214,7 +229,7 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: colorScheme.primary,
-          textStyle: GoogleFonts.crimsonText(fontWeight: FontWeight.w700, fontSize: 16),
+          textStyle: _font(fontWeight: FontWeight.w700, fontSize: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           side: BorderSide(color: colorScheme.primary.withValues(alpha: 0.4)),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
@@ -223,14 +238,14 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: colorScheme.primary,
-          textStyle: GoogleFonts.crimsonText(fontWeight: FontWeight.w700, fontSize: 16),
+          textStyle: _font(fontWeight: FontWeight.w700, fontSize: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: const Color(0xFF1E1E22),
-        hintStyle: GoogleFonts.crimsonText(color: Colors.white30),
+        hintStyle: _font(color: Colors.white30),
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),

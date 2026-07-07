@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../../../app/router/app_router.dart';
+import '../../../shared/utils/duration_format.dart';
 import '../../../shared/widgets/book_scaffold.dart';
 import '../../../shared/widgets/confirm_dialog.dart';
 import '../../books/application/books_vm.dart';
@@ -25,7 +26,8 @@ class ReadingLogDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final logAsync = ref.watch(readingLogProvider(logId));
-    final booksVm = ref.watch(booksVmProvider.notifier);
+    ref.watch(booksVmProvider); // T2.21: rebuild when books finish loading
+    final booksVm = ref.read(booksVmProvider.notifier);
     
     return logAsync.when(
       data: (log) {
@@ -111,7 +113,8 @@ Widget _buildContent(BuildContext context, WidgetRef ref, ReadingLog log, Book b
               icon: Icons.access_time,
               iconColor: Theme.of(context).colorScheme.primary,
               label: 'SÜRE',
-              value: _formatDuration(log.minutes),
+              // T2.8/T4.3: use effective seconds so sub-minute sessions aren't "0 sn".
+              value: formatSecondsHuman(log.effectiveDurationSeconds),
             ),
             const SizedBox(height: 24),
             if (log.audioFilePath != null) ...[
@@ -305,25 +308,6 @@ String _formatDate(DateTime date) {
   }
 }
 
-String _formatDuration(int minutes) {
-  if (minutes < 1) {
-    // 1 dakikadan küçükse saniye göster
-    final seconds = (minutes * 60).round();
-    return '$seconds sn';
-  } else if (minutes < 60) {
-    // 1 saatten küçükse sadece dakika göster
-    return '$minutes dk';
-  } else {
-    // 60 dakikadan büyükse saat ve dakika göster
-    final hours = minutes ~/ 60;
-    final mins = minutes % 60;
-    if (mins == 0) {
-      return '$hours sa';
-    } else {
-      return '$hours sa $mins dk';
-    }
-  }
-}
 
 Future<void> _handleDelete(BuildContext context, WidgetRef ref, String logId) async {
   final ok = await showConfirmDialog(
@@ -332,22 +316,13 @@ Future<void> _handleDelete(BuildContext context, WidgetRef ref, String logId) as
     message: 'Bu okuma kaydını silmek istediğinize emin misiniz?\nBu işlem geri alınamaz.',
   );
   if (ok && context.mounted) {
-    // Önce log'u al (bookId için)
-    final log = await ref.read(readingLogsRepositoryProvider).getById(logId);
-    final bookId = log?.bookId;
-    
     await ref.read(readingLogsRepositoryProvider).delete(logId);
-    
-    // Provider'ları invalidate et
+
+    // T2.4: refresh the per-log detail provider and the list notifier; do NOT
+    // invalidate the singleton repository.
     ref.invalidate(readingLogProvider(logId));
-    ref.read(readingLogsProvider.notifier).reload();
-    if (bookId != null) {
-      // Okuma kayıtlarım ekranını güncelle - tüm bookId'ler için invalidate et
-      // FutureProvider.autoDispose olduğu için sayfa tekrar açıldığında otomatik yenilenecek
-      // Ancak manuel olarak da invalidate edebiliriz
-      ref.invalidate(readingLogsRepositoryProvider);
-    }
-    
+    await ref.read(readingLogsProvider.notifier).reload();
+
     if (context.mounted) {
       context.pop();
     }

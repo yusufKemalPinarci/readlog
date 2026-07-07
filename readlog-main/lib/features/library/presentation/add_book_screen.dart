@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../app/router/app_router.dart';
@@ -38,6 +39,7 @@ class _AddBookScreenState extends ConsumerState<AddBookScreen> {
   File? _selectedImage;
   bool _showSearch = true;
   bool _isSearching = false;
+  bool _isSaving = false; // T2.14: guard against double-tap creating two books
   List<OpenLibraryBook> _searchResults = [];
   String? _searchError;
   int? _rating; // Added rating state
@@ -122,22 +124,8 @@ class _AddBookScreenState extends ConsumerState<AddBookScreen> {
     titleCtrl.text = book.title;
     authorCtrl.text = book.author ?? '';
 
-    // Sayfa sayısını doldur - yoksa editions API'den çek
-    if (book.pageCount != null) {
-      pagesCtrl.text = book.pageCount.toString();
-    } else if (book.editionKey != null) {
-      pagesCtrl.text = '';
-      try {
-        final pages = await _openLibraryService.fetchPageCount(book.editionKey!);
-        if (pages != null && mounted && pagesCtrl.text.isEmpty) {
-          pagesCtrl.text = pages.toString();
-        }
-      } catch (_) {
-        // Sayfa sayısı opsiyonel, hata yoksayılır
-      }
-    } else {
-      pagesCtrl.text = '';
-    }
+    // Sayfa sayısı arama sonucundan gelir; yoksa boş bırakılır (T3.4).
+    pagesCtrl.text = book.pageCount != null ? book.pageCount.toString() : '';
 
     // Kapak resmini indir ve kaydet (yüksek kaliteli URL kullan)
     final downloadUrl = book.highResCoverUrl ?? book.coverImageUrl;
@@ -280,6 +268,7 @@ class _AddBookScreenState extends ConsumerState<AddBookScreen> {
   }
 
   Future<void> _save() async {
+    if (_isSaving) return; // T2.14: reentrancy guard
     final title = titleCtrl.text.trim();
     final author = authorCtrl.text.trim();
     final pages = int.tryParse(pagesCtrl.text.trim()) ?? 0;
@@ -293,16 +282,25 @@ class _AddBookScreenState extends ConsumerState<AddBookScreen> {
       return;
     }
 
+    // Set synchronously (before any await) so a second queued tap is blocked.
+    setState(() => _isSaving = true);
+    try {
     final vm = ref.read(booksVmProvider.notifier);
     final id = widget.bookId ?? DateTime.now().microsecondsSinceEpoch.toString();
 
-    // Resmi kaydet
+    // Resmi kaydet.
+    // T1.8: copyWith artık null'ı "temizle" olarak yorumluyor. Kapak
+    // değişmediyse mevcut yolu geri gönder; kaldırıldıysa açıkça null gönder.
     String? savedImagePath;
     if (_selectedImage != null) {
       savedImagePath = await _imageService.saveImage(id, _selectedImage!.path);
     } else if (_coverImagePath == null && widget.bookId != null) {
       // Eğer resim kaldırıldıysa (edit modunda), eski resmi sil
       await _imageService.deleteImage(id);
+      savedImagePath = null;
+    } else {
+      // Kapak değişmedi: mevcut yolu koru
+      savedImagePath = _coverImagePath;
     }
 
     if (widget.bookId == null) {
@@ -323,6 +321,9 @@ class _AddBookScreenState extends ConsumerState<AddBookScreen> {
       );
     }
     if (mounted) context.pop();
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override
@@ -749,6 +750,7 @@ class _AddBookScreenState extends ConsumerState<AddBookScreen> {
             hintText: 'Örn. 350',
             icon: Icons.numbers,
             keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly], // T4.6
             controller: pagesCtrl,
           ),
           if (_currentShelf == BookShelf.read) ...[
@@ -784,8 +786,10 @@ class _AddBookScreenState extends ConsumerState<AddBookScreen> {
           ],
           const SizedBox(height: 22),
           FilledButton.icon(
-            onPressed: _save,
-            icon: const Icon(Icons.add),
+            onPressed: _isSaving ? null : _save,
+            icon: _isSaving
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.add),
             label: Text(isEdit ? 'Değişiklikleri Kaydet' : 'Kitap Ekle'),
           ),
         ],
@@ -824,6 +828,7 @@ class _TextFieldCard extends StatelessWidget {
     required this.icon,
     required this.controller,
     this.keyboardType,
+    this.inputFormatters,
   });
 
   final String label;
@@ -831,6 +836,7 @@ class _TextFieldCard extends StatelessWidget {
   final IconData icon;
   final TextEditingController controller;
   final TextInputType? keyboardType;
+  final List<TextInputFormatter>? inputFormatters;
 
   @override
   Widget build(BuildContext context) {
@@ -853,6 +859,7 @@ class _TextFieldCard extends StatelessWidget {
               child: TextField(
                 controller: controller,
                 keyboardType: keyboardType,
+                inputFormatters: inputFormatters,
                 decoration: InputDecoration(
                   labelText: label,
                   hintText: hintText,

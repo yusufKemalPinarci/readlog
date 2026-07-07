@@ -31,31 +31,9 @@ class PermissionService {
     return false;
   }
 
-  /// Depolama iznini kontrol et ve gerekirse iste
-  static Future<bool> requestStoragePermission(BuildContext context) async {
-    // Android 13+ için
-    if (await Permission.storage.isGranted) {
-      return true;
-    }
-    
-    if (await Permission.storage.isDenied) {
-      final result = await Permission.storage.request();
-      if (result.isGranted) {
-        return true;
-      } else if (result.isPermanentlyDenied && context.mounted) {
-        await _showPermissionDeniedDialog(context, 'Depolama');
-        return false;
-      }
-      return false;
-    }
-    
-    if (await Permission.storage.isPermanentlyDenied && context.mounted) {
-      await _showPermissionDeniedDialog(context, 'Depolama');
-      return false;
-    }
-    
-    return true; // iOS için gerekli değil
-  }
+  // T4.11: the legacy Permission.storage path was removed — the app writes to
+  // its own private directories (getApplicationDocumentsDirectory), so no
+  // storage permission is needed on any Android version.
 
   /// Kamera iznini kontrol et ve gerekirse iste
   static Future<bool> requestCameraPermission(BuildContext context) async {
@@ -148,7 +126,8 @@ class PermissionService {
       builder: (context) => AlertDialog(
         title: Text('$permissionName İzni Gerekli'),
         content: Text(
-          'Ses kaydı yapabilmek için $permissionName iznine ihtiyacımız var. '
+          // T4.11: per-permission text, not always "voice recording".
+          'Bu özelliği kullanabilmek için $permissionName iznine ihtiyacımız var. '
           'Lütfen ayarlardan izni verin.',
         ),
         actions: [
@@ -157,9 +136,9 @@ class PermissionService {
             child: const Text('İptal'),
           ),
           TextButton(
-            onPressed: () {
-              openAppSettings();
+            onPressed: () async {
               Navigator.of(context).pop();
+              await openAppSettings(); // T4.11: awaited
             },
             child: const Text('Ayarlara Git'),
           ),

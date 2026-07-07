@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -13,8 +14,9 @@ import '../../books/domain/book.dart';
 import '../../../shared/services/image_storage_service.dart';
 
 final _bookProvider = FutureProvider.autoDispose.family<Book?, String>((ref, bookId) async {
-  final vm = ref.watch(booksVmProvider.notifier);
-  return vm.byId(bookId);
+  // T2.21: depend on the state so this recomputes when books finish loading.
+  ref.watch(booksVmProvider);
+  return ref.read(booksVmProvider.notifier).byId(bookId);
 });
 
 class EditCompletedBookScreen extends ConsumerStatefulWidget {
@@ -41,6 +43,7 @@ class _EditCompletedBookScreenState extends ConsumerState<EditCompletedBookScree
   File? _selectedImage;
   int? _rating;
   bool _isLoading = false;
+  bool _initialized = false; // T2.17: load book data exactly once
 
   @override
   void initState() {
@@ -226,10 +229,13 @@ class _EditCompletedBookScreenState extends ConsumerState<EditCompletedBookScree
           );
         }
 
-        // İlk yüklemede verileri doldur
-        if (_titleCtrl.text.isEmpty) {
+        // T2.17: populate exactly once. The old guard reloaded whenever the
+        // title field was empty, so clearing the title reverted it every rebuild
+        // and it could never be edited to empty (validated on save instead).
+        if (!_initialized) {
+          _initialized = true;
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            _loadBookData(book);
+            if (mounted) _loadBookData(book);
           });
         }
 
@@ -334,6 +340,7 @@ class _EditCompletedBookScreenState extends ConsumerState<EditCompletedBookScree
                 TextField(
                   controller: _pagesCtrl,
                   keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly], // T4.6
                   decoration: InputDecoration(
                     labelText: 'Toplam Sayfa *',
                     border: OutlineInputBorder(

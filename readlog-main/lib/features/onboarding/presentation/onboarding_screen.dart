@@ -17,7 +17,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   final List<_OnboardingPageData> _pages = [
     _OnboardingPageData(
-      title: 'ReadLog\'a Hoş Geldiniz',
+      title: 'Libris\'e Hoş Geldiniz',
       description: 'Kitap okuma alışkanlığınızı takip edin, hedeflerinize ulaşın.',
       icon: Icons.menu_book_rounded,
     ),

@@ -1,6 +1,32 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+/// Thrown by [LocalStorageService] when a stored blob exists but cannot be
+/// decoded. Callers must treat this as "data present but unreadable" and must
+/// NOT overwrite storage — otherwise a transient decode bug wipes real data.
+class StorageCorruptionException implements Exception {
+  StorageCorruptionException(this.key, [this.cause]);
+  final String key;
+  final Object? cause;
+  @override
+  String toString() => 'StorageCorruptionException($key): $cause';
+}
+
+/// Raw snapshot of the persisted blobs for transactional import rollback (T1.5).
+class StorageSnapshot {
+  StorageSnapshot({
+    required this.books,
+    required this.logs,
+    required this.profile,
+    required this.themeMode,
+  });
+  final String? books;
+  final String? logs;
+  final String? profile;
+  final String? themeMode;
+}
 
 class LocalStorageService {
   LocalStorageService(this._prefs);
@@ -13,41 +39,53 @@ class LocalStorageService {
   static const String _isFirstLaunchKey = 'is_first_launch';
   static const String _profileKey = 'profile_data';
 
+  static String _backupKey(String key) => '$key.bak';
+  static String _corruptKey(String key) => '$key.corrupt.bak';
+
+  /// Rolls the current blob into `<key>.bak` before it is overwritten, so the
+  /// immediately-previous state is always recoverable (T1.4).
+  Future<void> _rollBackup(String key) async {
+    final existing = _prefs.getString(key);
+    if (existing != null) {
+      await _prefs.setString(_backupKey(key), existing);
+    }
+  }
+
+  /// Decodes a stored JSON list. Returns [] only when the key is genuinely
+  /// absent. On a decode/type failure it preserves the raw blob under
+  /// `<key>.corrupt.bak` and throws [StorageCorruptionException] rather than
+  /// masquerading corruption as "empty" (T1.4).
+  List<Map<String, dynamic>> _loadList(String key) {
+    final String? jsonString = _prefs.getString(key);
+    if (jsonString == null) return [];
+    try {
+      final decoded = jsonDecode(jsonString) as List<dynamic>;
+      // Eager per-element cast so a bad element throws here, inside the guard.
+      return List<Map<String, dynamic>>.from(
+        decoded.map((e) => Map<String, dynamic>.from(e as Map)),
+      );
+    } catch (e) {
+      // Keep the raw blob for recovery; never silently drop it.
+      unawaited(_prefs.setString(_corruptKey(key), jsonString));
+      throw StorageCorruptionException(key, e);
+    }
+  }
+
   // Books
   Future<void> saveBooks(List<Map<String, dynamic>> booksJson) async {
+    await _rollBackup(_booksKey);
     await _prefs.setString(_booksKey, jsonEncode(booksJson));
   }
 
-  List<Map<String, dynamic>> loadBooks() {
-    final String? jsonString = _prefs.getString(_booksKey);
-    if (jsonString == null) return [];
-    
-    try {
-      final decoded = jsonDecode(jsonString) as List<dynamic>;
-      return decoded.cast<Map<String, dynamic>>();
-    } catch (e) {
-      // JSON format hatası durumunda boş liste dön
-      return [];
-    }
-  }
+  List<Map<String, dynamic>> loadBooks() => _loadList(_booksKey);
 
   // Reading Logs
   Future<void> saveReadingLogs(List<Map<String, dynamic>> logsJson) async {
+    await _rollBackup(_readingLogsKey);
     await _prefs.setString(_readingLogsKey, jsonEncode(logsJson));
   }
 
-  List<Map<String, dynamic>> loadReadingLogs() {
-    final String? jsonString = _prefs.getString(_readingLogsKey);
-    if (jsonString == null) return [];
-
-    try {
-      final decoded = jsonDecode(jsonString) as List<dynamic>;
-      return decoded.cast<Map<String, dynamic>>();
-    } catch (e) {
-       // JSON format hatası durumunda boş liste dön
-      return [];
-    }
-  }
+  List<Map<String, dynamic>> loadReadingLogs() => _loadList(_readingLogsKey);
   
   // Clear all data (for debugging or logout)
   Future<void> clearAll() async {
@@ -58,13 +96,29 @@ class LocalStorageService {
     await _prefs.remove(_themeModeKey);
   }
 
-  // Theme Mode
-  Future<void> saveThemeMode(bool isDark) async {
-    await _prefs.setBool(_themeModeKey, isDark);
+  // Theme Mode — canonical representation shared with ThemeManager.
+  //
+  // T1.6: the same `theme_mode` key used to be written as a bool here and as a
+  // String ('light'/'dark') by ThemeManager, colliding. Now this delegates to
+  // the string form: 'light' | 'dark', or absent for "system". Reads tolerate a
+  // legacy bool value written by older builds.
+  Future<void> saveThemeModeString(String? mode) async {
+    if (mode == 'light' || mode == 'dark') {
+      await _prefs.setString(_themeModeKey, mode!);
+    } else {
+      await _prefs.remove(_themeModeKey);
+    }
   }
 
-  bool loadThemeMode() {
-    return _prefs.getBool(_themeModeKey) ?? false; // Default to light mode
+  String? loadThemeModeString() {
+    final Object? raw = _prefs.get(_themeModeKey);
+    if (raw is String) {
+      return (raw == 'light' || raw == 'dark') ? raw : null;
+    }
+    if (raw is bool) {
+      return raw ? 'dark' : 'light'; // legacy migration tolerance
+    }
+    return null;
   }
 
   // Profile
@@ -80,6 +134,30 @@ class LocalStorageService {
       return jsonDecode(jsonString) as Map<String, dynamic>;
     } catch (e) {
       return null;
+    }
+  }
+
+  // Transactional snapshot/restore (T1.5) — used to roll storage back when an
+  // import fails partway, so a bad backup can't leave data half-written.
+  StorageSnapshot snapshot() => StorageSnapshot(
+        books: _prefs.getString(_booksKey),
+        logs: _prefs.getString(_readingLogsKey),
+        profile: _prefs.getString(_profileKey),
+        themeMode: loadThemeModeString(),
+      );
+
+  Future<void> restore(StorageSnapshot s) async {
+    await _writeOrRemove(_booksKey, s.books);
+    await _writeOrRemove(_readingLogsKey, s.logs);
+    await _writeOrRemove(_profileKey, s.profile);
+    await saveThemeModeString(s.themeMode);
+  }
+
+  Future<void> _writeOrRemove(String key, String? value) async {
+    if (value == null) {
+      await _prefs.remove(key);
+    } else {
+      await _prefs.setString(key, value);
     }
   }
 

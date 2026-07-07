@@ -12,18 +12,13 @@ class DailyGoalScreen extends ConsumerStatefulWidget {
   ConsumerState<DailyGoalScreen> createState() => _DailyGoalScreenState();
 }
 
+const int _minGoal = 5;
+const int _maxGoal = 180;
+
 class _DailyGoalScreenState extends ConsumerState<DailyGoalScreen> {
   int _selectedMinutes = 45;
   bool _isSaving = false;
-
-  @override
-  void initState() {
-    super.initState();
-    final profileAsync = ref.read(profileProvider);
-    profileAsync.whenData((profile) {
-      _selectedMinutes = profile.dailyGoalMinutes;
-    });
-  }
+  bool _initialized = false; // T1.11: one-shot init from the loaded profile
 
   Future<void> _save() async {
     setState(() => _isSaving = true);
@@ -58,8 +53,11 @@ class _DailyGoalScreenState extends ConsumerState<DailyGoalScreen> {
       ),
       body: profileAsync.when(
         data: (profile) {
-          if (_selectedMinutes == 45 && profile.dailyGoalMinutes != 45) {
-            _selectedMinutes = profile.dailyGoalMinutes;
+          // T1.11: initialize once from the profile, clamped into the slider's
+          // valid range so a stored 0 (or any out-of-range value) can't crash it.
+          if (!_initialized) {
+            _selectedMinutes = profile.dailyGoalMinutes.clamp(_minGoal, _maxGoal);
+            _initialized = true;
           }
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -108,14 +106,14 @@ class _DailyGoalScreenState extends ConsumerState<DailyGoalScreen> {
                       ),
                       Expanded(
                         child: Slider(
-                          value: _selectedMinutes.toDouble(),
-                          min: 5,
-                          max: 180,
+                          value: _selectedMinutes.toDouble().clamp(_minGoal.toDouble(), _maxGoal.toDouble()),
+                          min: _minGoal.toDouble(),
+                          max: _maxGoal.toDouble(),
                           divisions: 35,
                           label: '$_selectedMinutes dk',
                           onChanged: (value) {
                             setState(() {
-                              _selectedMinutes = value.round();
+                              _selectedMinutes = value.round().clamp(_minGoal, _maxGoal);
                             });
                           },
                         ),

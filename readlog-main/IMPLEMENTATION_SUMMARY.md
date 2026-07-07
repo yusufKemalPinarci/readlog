@@ -57,16 +57,7 @@
   - Otomatik bağlantı durumu takibi
 - **Kullanım**: `app.dart`'ta otomatik gösteriliyor
 
-### 7. Background Sync Service ✅
-- **Dosya**: `lib/shared/services/background_sync_service.dart`
-- **Durum**: Oluşturuldu
-- **Özellikler**:
-  - WorkManager entegrasyonu
-  - Periyodik sync
-  - Tek seferlik sync
-- **Kullanım**: `main.dart`'ta başlatılıyor (opsiyonel)
-
-### 8. Unit Tests ✅
+### 7. Unit Tests ✅
 - **Dosyalar**:
   - `test/services/local_storage_service_test.dart`
   - `test/services/data_backup_service_test.dart`
@@ -77,10 +68,10 @@
 
 ```yaml
 connectivity_plus: ^6.1.0
-workmanager: ^0.5.2
 ```
 
 **Not**: Firebase paketleri kaldırıldı. Tüm veriler local storage'da tutuluyor.
+Arka plan senkronizasyonu (WorkManager) kullanılmıyor.
 
 ## 🔧 Yapılandırma Notları
 

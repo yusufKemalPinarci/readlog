@@ -133,5 +133,30 @@ void main() {
       ];
       expect(service.calculateBestStreak(logs), 1);
     });
+
+    // T5.5: DST-boundary dates. With the old `subtract(Duration(days:1))`,
+    // stepping across a 23h/25h day landed off-midnight and broke the streak;
+    // calendar-day stepping (_prevDay) is correct. These pass on every host and
+    // specifically exercise the fix where the local TZ observes US DST.
+    test('spring-forward days stay consecutive (T5.5)', () {
+      // 2026-03-08 is the US spring-forward date.
+      final logs = [
+        _log(DateTime(2026, 3, 7, 9)),
+        _log(DateTime(2026, 3, 8, 9)),
+        _log(DateTime(2026, 3, 9, 9)),
+        _log(DateTime(2026, 3, 10, 9)),
+      ];
+      expect(service.calculateBestStreak(logs), 4);
+    });
+
+    test('fall-back days stay consecutive (T5.5)', () {
+      // 2026-11-01 is the US fall-back date.
+      final logs = [
+        _log(DateTime(2026, 10, 31, 9)),
+        _log(DateTime(2026, 11, 1, 9)),
+        _log(DateTime(2026, 11, 2, 9)),
+      ];
+      expect(service.calculateBestStreak(logs), 3);
+    });
   });
 }

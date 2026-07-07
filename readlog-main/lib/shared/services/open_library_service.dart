@@ -118,7 +118,9 @@ class OpenLibraryService {
       );
 
       if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body) as Map<String, dynamic>;
+        // T2.28: decode as UTF-8 explicitly — response.body uses the charset
+        // from Content-Type (latin1 when absent), mangling Turkish characters.
+        final jsonData = json.decode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
         final docs = jsonData['docs'] as List<dynamic>?;
 
         if (docs == null || docs.isEmpty) {
@@ -133,13 +135,12 @@ class OpenLibraryService {
         throw Exception('API hatası: ${response.statusCode}');
       }
     } catch (e) {
+      // T2.28: don't double-wrap — the specific messages above are already
+      // Exceptions; only wrap genuinely non-Exception errors.
+      if (e is Exception) rethrow;
       throw Exception('Kitap arama hatası: $e');
     }
   }
 
-  /// Sayfa sayısını çek - artık arama sonuçlarında geliyor, uyumluluk için korundu
-  Future<int?> fetchPageCount(String workKey) async {
-    return null;
-  }
 }
 

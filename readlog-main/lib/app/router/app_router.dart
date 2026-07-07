@@ -117,12 +117,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
-        path: '/book-detail/:bookId',
-        builder: (context, state) => BookReadingLogsScreen(
-          bookId: state.pathParameters['bookId']!,
-        ),
-      ),
-      GoRoute(
         path: '/edit-completed-book/:bookId',
         builder: (context, state) => EditCompletedBookScreen(
           bookId: state.pathParameters['bookId']!,
@@ -140,11 +134,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'calendar_day_detail',
         path: '/calendar-day-detail',
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>;
-          return CalendarDayDetailScreen(
-            date: extra['date'] as DateTime,
-            logs: extra['logs'] as List<ReadingLog>,
-          );
+          // T2.18: tolerate a missing/malformed extra instead of crashing.
+          final extra = state.extra as Map<String, dynamic>?;
+          final date = extra?['date'];
+          final logs = extra?['logs'];
+          if (date is! DateTime || logs is! List<ReadingLog>) {
+            return _RouterErrorScreen(error: Exception('Geçersiz gün detayı verisi'));
+          }
+          return CalendarDayDetailScreen(date: date, logs: logs);
         },
       ),
       GoRoute(
@@ -168,7 +165,6 @@ abstract final class Routes {
   static String readingLogDetail(String logId) => '/reading-log/$logId';
   static String editReadingLog(String logId) => '/edit-reading-log/$logId';
   static String bookReadingLogs(String bookId) => '/book-reading-logs/$bookId';
-  static String bookDetail(String bookId) => '/book-detail/$bookId';
   static const editProfile = '/edit-profile';
   static const dailyGoal = '/daily-goal';
   static const settings = '/settings';

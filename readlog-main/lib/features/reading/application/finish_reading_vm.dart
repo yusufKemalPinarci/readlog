@@ -8,6 +8,9 @@ import '../../books/application/books_vm.dart';
 import '../domain/reading_log.dart';
 import 'reading_providers.dart';
 
+/// Sentinel for [FinishReadingState.copyWith] so nullable fields can be cleared.
+const Object _unset = Object();
+
 @immutable
 class FinishReadingState {
   final int minutes;
@@ -20,7 +23,11 @@ class FinishReadingState {
   final bool isSaving;
   final String? error;
   final String? bookReview;
-  final String? finalTotalHours;
+
+  /// Book's cumulative total reading time in MINUTES (as entered/prefilled).
+  /// Despite historical naming, this has always held minutes — the finish
+  /// screen sends `(hours * 60) + minutes` here.
+  final String? finalTotalMinutes;
   final int? rating; // 1-5 stars
 
   const FinishReadingState({
@@ -34,37 +41,37 @@ class FinishReadingState {
     this.isSaving = false,
     this.error,
     this.bookReview,
-    this.finalTotalHours,
+    this.finalTotalMinutes,
     this.rating,
   });
 
   FinishReadingState copyWith({
     int? minutes,
-    int? durationSeconds,
-    int? pageAtEnd,
-    String? note,
-    String? audioFilePath,
-    String? noteFilePath,
-    String? title,
+    Object? durationSeconds = _unset,
+    Object? pageAtEnd = _unset,
+    Object? note = _unset,
+    Object? audioFilePath = _unset,
+    Object? noteFilePath = _unset,
+    Object? title = _unset,
     bool? isSaving,
-    String? error,
-    String? bookReview,
-    String? finalTotalHours,
-    int? rating,
+    Object? error = _unset,
+    Object? bookReview = _unset,
+    Object? finalTotalMinutes = _unset,
+    Object? rating = _unset,
   }) {
     return FinishReadingState(
       minutes: minutes ?? this.minutes,
-      durationSeconds: durationSeconds ?? this.durationSeconds,
-      pageAtEnd: pageAtEnd ?? this.pageAtEnd,
-      note: note ?? this.note,
-      audioFilePath: audioFilePath ?? this.audioFilePath,
-      noteFilePath: noteFilePath ?? this.noteFilePath,
-      title: title ?? this.title,
+      durationSeconds: identical(durationSeconds, _unset) ? this.durationSeconds : durationSeconds as int?,
+      pageAtEnd: identical(pageAtEnd, _unset) ? this.pageAtEnd : pageAtEnd as int?,
+      note: identical(note, _unset) ? this.note : note as String?,
+      audioFilePath: identical(audioFilePath, _unset) ? this.audioFilePath : audioFilePath as String?,
+      noteFilePath: identical(noteFilePath, _unset) ? this.noteFilePath : noteFilePath as String?,
+      title: identical(title, _unset) ? this.title : title as String?,
       isSaving: isSaving ?? this.isSaving,
-      error: error ?? this.error,
-      bookReview: bookReview ?? this.bookReview,
-      finalTotalHours: finalTotalHours ?? this.finalTotalHours,
-      rating: rating ?? this.rating,
+      error: identical(error, _unset) ? this.error : error as String?,
+      bookReview: identical(bookReview, _unset) ? this.bookReview : bookReview as String?,
+      finalTotalMinutes: identical(finalTotalMinutes, _unset) ? this.finalTotalMinutes : finalTotalMinutes as String?,
+      rating: identical(rating, _unset) ? this.rating : rating as int?,
     );
   }
 }
@@ -91,16 +98,28 @@ class FinishReadingVm extends AutoDisposeFamilyNotifier<FinishReadingState, Stri
   void setNoteFilePath(String? path) => state = state.copyWith(noteFilePath: path);
   void setTitle(String title) => state = state.copyWith(title: title);
   void setBookReview(String review) => state = state.copyWith(bookReview: review);
-  void setFinalTotalHours(String hours) => state = state.copyWith(finalTotalHours: hours);
+  void setFinalTotalMinutes(String minutes) => state = state.copyWith(finalTotalMinutes: minutes);
   void setRating(int? rating) => state = state.copyWith(rating: rating);
 
-  /// Kitaba ait tüm okuma loglarının sürelerini toplar ve state'e yazar
+  /// Kitaba ait tüm okuma loglarının sürelerini toplar ve "toplam süre" alanına
+  /// (finalTotalMinutes) ön-değer olarak yazar.
+  ///
+  /// T1.2: Bu toplamı `minutes`/`durationSeconds` alanlarına YAZMAZ; aksi halde
+  /// direkt bitirmede bu tarihsel toplam yeni bir log olarak tekrar kaydedilip
+  /// çift sayıma yol açardı. Yeni log yalnızca bu oturumun süresini taşır.
   Future<void> loadTotalMinutesForBook() async {
     final repo = ref.read(readingLogsRepositoryProvider);
-    final logs = await repo.listByBookId(arg);
+    var logs = await repo.listByBookId(arg);
+    // T2.7: on a re-read, only sum logs from the current pass (>= lastStartedAt).
+    final book = ref.read(booksVmProvider.notifier).byId(arg);
+    final since = book?.lastStartedAt;
+    if (since != null) {
+      logs = logs.where((log) => !log.date.isBefore(since)).toList();
+    }
     final totalSeconds = logs.fold<int>(0, (sum, log) => sum + log.effectiveDurationSeconds);
-    if (totalSeconds > 0) {
-      state = state.copyWith(minutes: totalSeconds ~/ 60, durationSeconds: totalSeconds);
+    final totalMinutes = totalSeconds ~/ 60;
+    if (totalMinutes > 0) {
+      state = state.copyWith(finalTotalMinutes: totalMinutes.toString());
     }
   }
 
@@ -158,21 +177,15 @@ class FinishReadingVm extends AutoDisposeFamilyNotifier<FinishReadingState, Stri
         title: state.title,
       );
       
-      // Use notifier to add log so UI updates immediately
+      // Use notifier to add log so UI updates immediately. The notifier reloads
+      // from the singleton repository, so no provider invalidation is needed.
       await ref.read(readingLogsProvider.notifier).addLog(log);
-      
-      // Provider'ları invalidate et ki yeni kayıt görünsün
-      ref.invalidate(readingLogsProvider);
-      
-      // readingLogProvider'ı invalidate et (family provider olduğu için logId ile)
+
+      // T2.4: never invalidate the repository/list providers — that would rebuild
+      // a fresh repo from storage and drop any in-flight in-memory state
+      // (lost-update / resurrection class). Only refresh the specific per-log
+      // detail view, which reads from the same singleton repo.
       ref.invalidate(readingLogProvider(logId));
-      
-      // _readingLogProvider'ı invalidate et (family provider olduğu için logId ile)
-      // Not: reading_log_detail_screen.dart'da tanımlı, burada import edemeyiz
-      // Ama repository'yi invalidate edersek _readingLogProvider otomatik yenilenecek
-      // Ancak bu yeni instance oluşturur, bu yüzden önce storage'a yazılmasını bekliyoruz
-      // _save() zaten await edildi, bu yüzden güvenli
-      ref.invalidate(readingLogsRepositoryProvider);
 
       // Kitabın currentPage'ini güncelle
       await booksVm.updateCurrentPage(arg, pageAtEnd);
@@ -180,12 +193,14 @@ class FinishReadingVm extends AutoDisposeFamilyNotifier<FinishReadingState, Stri
       // Eğer kitap tamamlandıysa, kitabı okunduya al ve review bilgilerini kaydet
       if (isBookCompleted) {
         
-        // Varsa review ve total minutes bilgilerini de güncelle
+        // Varsa review ve total minutes bilgilerini de güncelle.
+        // T1.1: finalTotalMinutes ekrandan zaten DAKİKA olarak gelir; burada
+        // 60 ile çarpmak 60x şişmeye yol açıyordu. Doğrudan dakika olarak oku.
         int? finalMinutes;
-        if (state.finalTotalHours != null && state.finalTotalHours!.isNotEmpty) {
-           final hours = double.tryParse(state.finalTotalHours!.replaceAll(',', '.'));
-           if (hours != null) {
-             finalMinutes = (hours * 60).round();
+        if (state.finalTotalMinutes != null && state.finalTotalMinutes!.trim().isNotEmpty) {
+           final parsed = double.tryParse(state.finalTotalMinutes!.replaceAll(',', '.'));
+           if (parsed != null) {
+             finalMinutes = parsed.round();
            }
         }
         // Timer'dan gelen süreyi fallback olarak kullan

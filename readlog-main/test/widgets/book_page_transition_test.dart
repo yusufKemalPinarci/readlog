@@ -47,10 +47,10 @@ void main() {
   group('BookPageView', () {
     testWidgets('child widget ları render eder', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: BookPageView(
-              children: const [
+              children: [
                 Center(child: Text('Sayfa 1')),
                 Center(child: Text('Sayfa 2')),
                 Center(child: Text('Sayfa 3')),
@@ -111,10 +111,10 @@ void main() {
 
     testWidgets('BouncingScrollPhysics varsayılan', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: BookPageView(
-              children: const [
+              children: [
                 Center(child: Text('Sayfa 1')),
               ],
             ),

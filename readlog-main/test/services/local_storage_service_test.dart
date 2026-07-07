@@ -57,20 +57,33 @@ void main() {
       });
     });
 
-    group('ThemeMode', () {
-      test('varsayılan tema light (false)', () {
-        expect(service.loadThemeMode(), false);
+    group('ThemeMode (T1.6 canonical string)', () {
+      test('varsayılan tema null (system)', () {
+        expect(service.loadThemeModeString(), isNull);
       });
 
       test('dark tema kaydedilir ve yüklenir', () async {
-        await service.saveThemeMode(true);
-        expect(service.loadThemeMode(), true);
+        await service.saveThemeModeString('dark');
+        expect(service.loadThemeModeString(), 'dark');
       });
 
       test('light tema kaydedilir', () async {
-        await service.saveThemeMode(true);
-        await service.saveThemeMode(false);
-        expect(service.loadThemeMode(), false);
+        await service.saveThemeModeString('dark');
+        await service.saveThemeModeString('light');
+        expect(service.loadThemeModeString(), 'light');
+      });
+
+      test('null/system temayı temizler', () async {
+        await service.saveThemeModeString('dark');
+        await service.saveThemeModeString(null);
+        expect(service.loadThemeModeString(), isNull);
+      });
+
+      test('legacy bool değeri okunabilir (migration tolerance)', () async {
+        SharedPreferences.setMockInitialValues({'theme_mode': true});
+        final prefs = await SharedPreferences.getInstance();
+        final legacy = LocalStorageService(prefs);
+        expect(legacy.loadThemeModeString(), 'dark');
       });
     });
 
@@ -89,14 +102,14 @@ void main() {
       test('tüm verileri temizler', () async {
         await service.saveBooks([{'id': '1', 'title': 'Test'}]);
         await service.saveReadingLogs([{'id': '1', 'bookId': '1'}]);
-        await service.saveThemeMode(true);
+        await service.saveThemeModeString('dark');
         await service.setIsFirstLaunch(false);
 
         await service.clearAll();
 
         expect(service.loadBooks(), isEmpty);
         expect(service.loadReadingLogs(), isEmpty);
-        expect(service.loadThemeMode(), false);
+        expect(service.loadThemeModeString(), isNull);
         expect(service.getIsFirstLaunch(), true);
       });
     });

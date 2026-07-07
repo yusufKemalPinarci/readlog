@@ -7,26 +7,15 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/router/app_router.dart';
 import '../../../../shared/widgets/book_scaffold.dart';
+import '../../../../shared/utils/reading_stats.dart';
+import '../../../../shared/utils/duration_format.dart';
 import '../../books/application/books_vm.dart';
 import '../../books/domain/book.dart';
+import '../../reading/application/reading_providers.dart';
 import '../../reading/domain/reading_log.dart';
 
-// Süre formatlama yardımcı fonksiyonu
-String _formatDuration(int totalSeconds) {
-  if (totalSeconds < 60) {
-    return '$totalSeconds sn';
-  } else if (totalSeconds < 3600) {
-    final minutes = totalSeconds ~/ 60;
-    final seconds = totalSeconds % 60;
-    if (seconds == 0) return '$minutes dk';
-    return '$minutes dk $seconds sn';
-  } else {
-    final hours = totalSeconds ~/ 3600;
-    final minutes = (totalSeconds % 3600) ~/ 60;
-    if (minutes == 0) return '$hours sa';
-    return '$hours sa $minutes dk';
-  }
-}
+// T4.3: single canonical formatter (shared/utils/duration_format.dart).
+String _formatDuration(int totalSeconds) => formatSecondsHuman(totalSeconds);
 
 class CalendarDayDetailScreen extends ConsumerWidget {
   const CalendarDayDetailScreen({
@@ -52,58 +41,35 @@ class CalendarDayDetailScreen extends ConsumerWidget {
              (logDate.isAfter(dayStart) && logDate.isBefore(dayEnd));
     }).toList();
     
-    // Kitapları grupla - sadece read shelf'indeki kitaplar ve mevcut kitaplar
+    // T1.12: include every session for the day regardless of the book's shelf,
+    // and keep sessions whose book was deleted (shown as a "Silinmiş kitap"
+    // placeholder) so calendar, streak and this detail view agree.
     final booksByLog = <String, Book>{};
     final logsByBook = <String, List<ReadingLog>>{};
     int totalMinutes = 0;
-    
-    // Sadece mevcut kitapların loglarını işle
-    final validDayLogs = dayLogs.where((log) {
-      final book = booksVm.byId(log.bookId);
-      return book != null && book.shelf == BookShelf.read;
-    }).toList();
-    
-    for (var log in validDayLogs) {
-      final book = booksVm.byId(log.bookId);
-      // Sadece mevcut ve read shelf'indeki kitapları göster
-      if (book != null && book.shelf == BookShelf.read) {
-        booksByLog[log.bookId] = book;
-        logsByBook.putIfAbsent(log.bookId, () => []).add(log);
-        totalMinutes += log.effectiveDurationSeconds; // Sadece mevcut kitapların süresini ekle
-      }
+
+    for (final log in dayLogs) {
+      final book = booksVm.byId(log.bookId) ??
+          Book(
+            id: log.bookId,
+            title: 'Silinmiş kitap',
+            author: '',
+            totalPages: 0,
+            shelf: BookShelf.read,
+          );
+      booksByLog[log.bookId] = book;
+      logsByBook.putIfAbsent(log.bookId, () => []).add(log);
+      totalMinutes += log.effectiveDurationSeconds;
     }
     
-    // Sayfa hesaplama - o gün için okunan sayfa sayısı
+    // T2.9: pages read that day = max pageAtEnd on the day − max before it, using
+    // each book's FULL history (not just this day's sessions). Shared helper.
+    final allLogs = ref.watch(readingLogsProvider);
     int totalPages = 0;
     final pagesByBook = <String, int>{};
-    
-    for (var entry in logsByBook.entries) {
-      final bookId = entry.key;
-      final bookLogs = entry.value;
-      
-      // O gün için bu kitapta okunan sayfa sayısını hesapla
-      // Logları tarihe göre sırala
-      bookLogs.sort((a, b) => a.date.compareTo(b.date));
-      
-      int pagesRead = 0;
-      if (bookLogs.length == 1) {
-        // Tek log varsa, sadece o sayfaya kadar okunmuş
-        pagesRead = bookLogs.first.pageAtEnd;
-      } else {
-        // Birden fazla log varsa, ilk ve son sayfa arasındaki fark
-        final firstPage = bookLogs.first.pageAtEnd;
-        final lastPage = bookLogs.last.pageAtEnd;
-        
-        // Eğer ilk sayfa 0 ise, son sayfa kadar okunmuş
-        // Değilse, son sayfa - ilk sayfa kadar okunmuş
-        pagesRead = firstPage == 0 ? lastPage : (lastPage - firstPage);
-        
-        // Eğer negatif veya 0 ise, sadece son sayfayı al
-        if (pagesRead <= 0) {
-          pagesRead = lastPage;
-        }
-      }
-      
+    for (final bookId in logsByBook.keys) {
+      final bookHistory = allLogs.where((l) => l.bookId == bookId).toList();
+      final pagesRead = pagesReadOnDay(bookHistory, date);
       pagesByBook[bookId] = pagesRead;
       totalPages += pagesRead;
     }
@@ -116,7 +82,7 @@ class CalendarDayDetailScreen extends ConsumerWidget {
           onPressed: () => context.pop(),
         ),
       ),
-      body: validDayLogs.isEmpty || logsByBook.isEmpty
+      body: logsByBook.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -209,21 +175,7 @@ class CalendarDayDetailScreen extends ConsumerWidget {
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
                       child: InkWell(
-                        onTap: () {
-                          // O güne özel kayıtları göster
-                          final dayFilteredLogs = bookLogs.where((log) {
-                            final logDate = DateTime(log.date.year, log.date.month, log.date.day);
-                            final dayStart = DateTime(date.year, date.month, date.day);
-                            final dayEnd = dayStart.add(const Duration(days: 1));
-                            return logDate.isAtSameMomentAs(dayStart) || 
-                                   (logDate.isAfter(dayStart) && logDate.isBefore(dayEnd));
-                          }).toList();
-                          
-                          context.push(
-                            Routes.bookReadingLogs(bookId),
-                            extra: {'filteredLogs': dayFilteredLogs, 'filterDate': date},
-                          );
-                        },
+                        onTap: () => context.push(Routes.bookReadingLogs(bookId)),
                         borderRadius: BorderRadius.circular(12),
                         child: Padding(
                           padding: const EdgeInsets.all(16),
@@ -371,11 +323,10 @@ class CalendarDayDetailScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   
-                  ...validDayLogs.where((log) {
-                    // Sadece mevcut kitapların loglarını göster
-                    final book = booksVm.byId(log.bookId);
-                    return log.bookId.isNotEmpty && book != null;
-                  }).map((log) {
+                  // T1.12: show every session for the day, including unfinished
+                  // and deleted-book sessions (the book subtitle is omitted when
+                  // the book no longer exists).
+                  ...dayLogs.map((log) {
                     final book = booksVm.byId(log.bookId);
                     return Card(
                       margin: const EdgeInsets.only(bottom: 8),

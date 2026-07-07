@@ -3,12 +3,27 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 
-class AudioRecordingService {
+/// The recording surface ActiveReadingVm depends on. Extracting it (T5.2) lets
+/// the VM be driven by a fake in tests without constructing a real AudioRecorder.
+abstract class AudioRecorderPort {
+  bool get isRecording;
+  String? get currentRecordingPath;
+  Future<bool> startRecording(String logId);
+  Future<void> pauseRecording();
+  Future<void> resumeRecording();
+  Future<String?> stopRecording();
+  Future<void> cancelRecording();
+  Future<void> dispose();
+}
+
+class AudioRecordingService implements AudioRecorderPort {
   final AudioRecorder _recorder = AudioRecorder();
   String? _currentRecordingPath;
   bool _isRecording = false;
 
+  @override
   bool get isRecording => _isRecording;
+  @override
   String? get currentRecordingPath => _currentRecordingPath;
 
   /// Mikrofon iznini kontrol et ve iste
@@ -58,6 +73,7 @@ class AudioRecordingService {
   }
 
   /// Ses kaydını başlat
+  @override
   Future<bool> startRecording(String logId) async {
     if (_isRecording) {
       return false;
@@ -110,7 +126,29 @@ class AudioRecordingService {
     }
   }
 
+  /// Kaydı geçici olarak duraklat (dosyayı kapatmadan). T2.1: böylece devam
+  /// ettirildiğinde aynı dosyaya yazılır ve segmentler kaybolmaz.
+  @override
+  Future<void> pauseRecording() async {
+    if (!_isRecording) return;
+    try {
+      await _recorder.pause();
+    } catch (_) {
+      // Duraklatma başarısız olursa kayıt durumunu bozma
+    }
+  }
+
+  /// Duraklatılmış kaydı aynı dosyaya devam ettir (T2.1).
+  @override
+  Future<void> resumeRecording() async {
+    if (!_isRecording) return;
+    try {
+      await _recorder.resume();
+    } catch (_) {}
+  }
+
   /// Ses kaydını durdur
+  @override
   Future<String?> stopRecording() async {
     if (!_isRecording) {
       return null;
@@ -130,12 +168,16 @@ class AudioRecordingService {
   }
 
   /// Kaydı iptal et (dosyayı sil)
+  @override
   Future<void> cancelRecording() async {
     if (_isRecording) {
-      await _recorder.stop();
+      // T4.12: never let a failing stop() wedge _isRecording at true.
+      try {
+        await _recorder.stop();
+      } catch (_) {}
       _isRecording = false;
     }
-    
+
     if (_currentRecordingPath != null) {
       try {
         final file = File(_currentRecordingPath!);
@@ -149,27 +191,12 @@ class AudioRecordingService {
     }
   }
 
-  /// Kayıt süresini al (saniye cinsinden)
-  Future<Duration?> getRecordingDuration() async {
-    if (!_isRecording || _currentRecordingPath == null) {
-      return null;
-    }
-
+  @override
+  Future<void> dispose() async {
+    // T4.12: actually await the recorder disposal.
     try {
-      final file = File(_currentRecordingPath!);
-      if (await file.exists()) {
-        // Dosya boyutundan yaklaşık süre hesapla (tam değil, yaklaşık)
-        // Gerçek süre için just_audio kullanılabilir
-        return null; // Şimdilik null döndür, timer'dan alınacak
-      }
-    } catch (e) {
-      return null;
-    }
-    return null;
-  }
-
-  void dispose() {
-    _recorder.dispose();
+      await _recorder.dispose();
+    } catch (_) {}
   }
 }
 

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -9,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
+import '../../../shared/utils/duration_format.dart';
 import '../../../shared/widgets/book_scaffold.dart';
 import '../../../shared/widgets/confirm_dialog.dart';
 import '../application/reading_providers.dart';
@@ -90,17 +92,7 @@ class _EditReadingLogScreenState extends ConsumerState<EditReadingLogScreen> {
     });
   }
 
-  String _formatEditDuration(int totalSeconds) {
-    if (totalSeconds < 60) return '$totalSeconds sn';
-    if (totalSeconds < 3600) {
-      final min = totalSeconds ~/ 60;
-      final sec = totalSeconds % 60;
-      return sec == 0 ? '$min dk' : '$min dk $sec sn';
-    }
-    final hrs = totalSeconds ~/ 3600;
-    final min = (totalSeconds % 3600) ~/ 60;
-    return min == 0 ? '$hrs sa' : '$hrs sa $min dk';
-  }
+  String _formatEditDuration(int totalSeconds) => formatSecondsHuman(totalSeconds); // T4.3
 
   Future<void> _selectDate(BuildContext context) async {
     final picked = await showDatePicker(
@@ -196,15 +188,13 @@ class _EditReadingLogScreenState extends ConsumerState<EditReadingLogScreen> {
       }
     }
 
-    final updated = ReadingLog(
-      id: existing.id,
-      bookId: existing.bookId,
+    // T2.2: build from `existing` so no field (notably `title`) is silently
+    // dropped; only the edited fields are overridden.
+    final updated = existing.copyWith(
       date: _selectedDate!,
       minutes: _minutes!,
       durationSeconds: _durationSeconds,
-      pageAtEnd: existing.pageAtEnd,
       note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
-      audioFilePath: existing.audioFilePath,
       noteFilePath: persistentImagePath,
     );
 
@@ -309,6 +299,7 @@ class _EditReadingLogScreenState extends ConsumerState<EditReadingLogScreen> {
                     child: TextField(
                       controller: _hoursCtrl,
                       keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly], // T4.6
                       decoration: const InputDecoration(
                         hintText: 'Saat',
                         suffixText: 'sa',
@@ -322,6 +313,7 @@ class _EditReadingLogScreenState extends ConsumerState<EditReadingLogScreen> {
                     child: TextField(
                       controller: _minutesPartCtrl,
                       keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly], // T4.6
                       decoration: const InputDecoration(
                         hintText: 'Dakika',
                         suffixText: 'dk',
@@ -335,6 +327,7 @@ class _EditReadingLogScreenState extends ConsumerState<EditReadingLogScreen> {
                     child: TextField(
                       controller: _secondsPartCtrl,
                       keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly], // T4.6
                       decoration: const InputDecoration(
                         hintText: 'Saniye',
                         suffixText: 'sn',
@@ -717,13 +710,14 @@ class _AudioPlayerState extends State<_AudioPlayer> {
             _isPlaying = state.playing;
           });
           
-          // Bittiğinde baştan başlat
-          if (state.processingState == ProcessingState.completed && state.playing == false) {
+          // T2.16: on completion, stop and reset to the start (align with the
+          // detail screen). The old inverted condition auto-replayed the clip.
+          if (state.processingState == ProcessingState.completed && state.playing) {
+            await _audioPlayer.pause();
             await _audioPlayer.seek(Duration.zero);
-            await _audioPlayer.play();
             if (mounted) {
               setState(() {
-                _isPlaying = true;
+                _isPlaying = false;
                 _currentPosition = Duration.zero;
               });
             }

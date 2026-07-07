@@ -6,15 +6,23 @@ import '../domain/book.dart';
 import 'books_providers.dart';
 import '../../../shared/services/image_storage_service.dart';
 
+/// Sentinel so BooksState.copyWith can clear the error.
+const Object _unset = Object();
+
 @immutable
 class BooksState {
-  const BooksState({required this.items, this.isLoading = false});
+  const BooksState({required this.items, this.isLoading = false, this.error});
 
   final List<Book> items;
   final bool isLoading;
+  final String? error; // T4.13: surfaces a load failure instead of loading forever
 
-  BooksState copyWith({List<Book>? items, bool? isLoading}) {
-    return BooksState(items: items ?? this.items, isLoading: isLoading ?? this.isLoading);
+  BooksState copyWith({List<Book>? items, bool? isLoading, Object? error = _unset}) {
+    return BooksState(
+      items: items ?? this.items,
+      isLoading: isLoading ?? this.isLoading,
+      error: identical(error, _unset) ? this.error : error as String?,
+    );
   }
 }
 
@@ -26,8 +34,19 @@ class BooksVm extends StateNotifier<BooksState> {
   final BooksRepository _repo;
 
   Future<void> _load() async {
-    final items = await _repo.list();
-    state = state.copyWith(items: items, isLoading: false);
+    // T4.13: never leave the UI stuck in isLoading; surface the error instead.
+    try {
+      final items = await _repo.list();
+      state = state.copyWith(items: items, isLoading: false, error: null);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+    }
+  }
+
+  /// Reload from the (singleton) repository — used after a backup import so the
+  /// list reflects restored data without recreating the provider (T2.4).
+  Future<void> reload() async {
+    await _load();
   }
 
   List<Book> byShelf(BookShelf shelf) {
@@ -108,8 +127,10 @@ class BooksVm extends StateNotifier<BooksState> {
   Future<void> markAsRead(String id, {String? review, int? finalMinutes, int? rating}) async {
     final current = await _repo.getById(id);
     if (current == null) return;
-    // İlk kez okunduğunda readCount'u 1 yap
-    final newReadCount = current.readCount == 0 ? 1 : current.readCount;
+    // T2.7: count a completion here (completing a re-read increments; abandoning
+    // a restart does not). Only when transitioning INTO the read shelf.
+    final newReadCount =
+        current.shelf == BookShelf.read ? current.readCount : current.readCount + 1;
     await _repo.upsert(current.copyWith(
       shelf: BookShelf.read,
       currentPage: current.totalPages,
@@ -124,14 +145,13 @@ class BooksVm extends StateNotifier<BooksState> {
   Future<void> restartReading(String id) async {
     final current = await _repo.getById(id);
     if (current == null) return;
-    // Eğer kitap daha önce okunduysa (read shelf'indeyse), readCount'u artır
-    final newReadCount = current.shelf == BookShelf.read 
-        ? current.readCount + 1 
-        : current.readCount;
+    // T2.7: do NOT increment readCount here — restarting/abandoning shouldn't
+    // count; completing (markAsRead) does. Stamp lastStartedAt so the finish
+    // flow sums only this pass's logs.
     await _repo.upsert(current.copyWith(
       shelf: BookShelf.reading,
       currentPage: 0,
-      readCount: newReadCount,
+      lastStartedAt: DateTime.now(),
     ));
     await _load();
   }
@@ -176,19 +196,25 @@ class BooksVm extends StateNotifier<BooksState> {
 
   Future<void> reorderBooks(BookShelf shelf, int oldIndex, int newIndex) async {
     final books = byShelf(shelf);
-    if (oldIndex < 0 || oldIndex >= books.length || newIndex < 0 || newIndex >= books.length) {
-      return;
-    }
-    
-    final movedBook = books[oldIndex];
-    final otherBooks = List<Book>.from(books)..removeAt(oldIndex);
-    otherBooks.insert(newIndex, movedBook);
-    
-    // Order değerlerini güncelle
-    for (int i = 0; i < otherBooks.length; i++) {
-      await _repo.upsert(otherBooks[i].copyWith(order: i));
-    }
-    
+    if (oldIndex < 0 || oldIndex >= books.length) return;
+
+    // T1.9: ReorderableListView reports newIndex in [0, length]; when moving an
+    // item downward the target shifts by one once the item is removed, and
+    // newIndex == length means "drop at the end".
+    if (newIndex > oldIndex) newIndex -= 1;
+    if (newIndex < 0) newIndex = 0;
+    if (newIndex >= books.length) newIndex = books.length - 1;
+    if (newIndex == oldIndex) return;
+
+    final reordered = List<Book>.from(books);
+    final movedBook = reordered.removeAt(oldIndex);
+    reordered.insert(newIndex, movedBook);
+
+    // T1.9: reassign order and persist in a single batched save.
+    final updated = <Book>[
+      for (int i = 0; i < reordered.length; i++) reordered[i].copyWith(order: i),
+    ];
+    await _repo.upsertAll(updated);
     await _load();
   }
 }

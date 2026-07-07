@@ -7,8 +7,8 @@ import 'theme/app_theme.dart';
 import 'theme/theme_manager.dart';
 import '../shared/widgets/offline_banner.dart';
 
-class ReadLogApp extends ConsumerWidget {
-  const ReadLogApp({super.key});
+class LibrisApp extends ConsumerWidget {
+  const LibrisApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

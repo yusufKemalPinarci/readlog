@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +7,7 @@ import 'package:intl/intl.dart';
 
 import '../../../app/router/app_router.dart';
 import '../../books/application/books_vm.dart';
+import '../../../shared/utils/duration_format.dart';
 import '../../../shared/widgets/book_scaffold.dart';
 import '../../books/domain/book.dart';
 import '../application/reading_providers.dart';
@@ -12,33 +15,15 @@ import '../domain/reading_log.dart';
 import '../../../shared/widgets/book_loading_widget.dart';
 
 // Süre formatlama yardımcı fonksiyonu (saniye cinsinden alır)
-String _formatDuration(int totalSeconds) {
-  if (totalSeconds < 60) {
-    return '$totalSeconds sn';
-  } else if (totalSeconds < 3600) {
-    final minutes = totalSeconds ~/ 60;
-    final seconds = totalSeconds % 60;
-    if (seconds == 0) return '$minutes dk';
-    return '$minutes dk $seconds sn';
-  } else {
-    final hours = totalSeconds ~/ 3600;
-    final minutes = (totalSeconds % 3600) ~/ 60;
-    if (minutes == 0) return '$hours sa';
-    return '$hours sa $minutes dk';
-  }
-}
+String _formatDuration(int totalSeconds) => formatSecondsHuman(totalSeconds); // T4.3
 
 class BookReadingLogsScreen extends ConsumerStatefulWidget {
   const BookReadingLogsScreen({
     super.key,
     required this.bookId,
-    this.filteredLogs,
-    this.filterDate,
   });
 
   final String bookId;
-  final List<ReadingLog>? filteredLogs;
-  final DateTime? filterDate;
 
   @override
   ConsumerState<BookReadingLogsScreen> createState() => _BookReadingLogsScreenState();
@@ -47,13 +32,12 @@ class BookReadingLogsScreen extends ConsumerStatefulWidget {
 class _BookReadingLogsScreenState extends ConsumerState<BookReadingLogsScreen> {
   @override
   Widget build(BuildContext context) {
-    final booksVm = ref.watch(booksVmProvider.notifier);
-    final book = booksVm.byId(widget.bookId);
+    // T2.21: watch the state so the screen rebuilds when books finish loading;
+    // watching only the notifier would render stale/missing data.
+    ref.watch(booksVmProvider);
+    final book = ref.read(booksVmProvider.notifier).byId(widget.bookId);
     
-    // Eğer filtrelenmiş loglar varsa onları kullan, yoksa tüm logları yükle
-    final logsAsync = widget.filteredLogs != null
-        ? AsyncValue.data(widget.filteredLogs!)
-        : ref.watch(_bookLogsProvider(widget.bookId));
+    final logsAsync = ref.watch(_bookLogsProvider(widget.bookId));
 
     if (book == null) {
       return BookScaffold(
@@ -106,14 +90,12 @@ class _Content extends ConsumerStatefulWidget {
     required this.logs,
     required this.totalDurationText,
     required this.sessionCount,
-    this.filterDate,
   });
 
   final Book book;
   final List<ReadingLog> logs;
   final String totalDurationText;
   final int sessionCount;
-  final DateTime? filterDate;
 
   @override
   ConsumerState<_Content> createState() => _ContentState();
@@ -125,26 +107,8 @@ class _ContentState extends ConsumerState<_Content> {
   _LogFilter _filter = _LogFilter.all;
 
   List<ReadingLog> get _filteredLogs {
-    // Eğer filterDate varsa, önce o güne ait logları filtrele
-    List<ReadingLog> logsToFilter = widget.logs;
-    
-    if (widget.filterDate != null) {
-      final dayStart = DateTime(
-        widget.filterDate!.year,
-        widget.filterDate!.month,
-        widget.filterDate!.day,
-      );
-      final dayEnd = dayStart.add(const Duration(days: 1));
-      
-      logsToFilter = widget.logs.where((log) {
-        final logDate = DateTime(log.date.year, log.date.month, log.date.day);
-        return logDate.isAtSameMomentAs(dayStart) || 
-               (logDate.isAfter(dayStart) && logDate.isBefore(dayEnd));
-      }).toList();
-    }
-    
     // Sort logs by date, newest first
-    final sorted = List<ReadingLog>.from(logsToFilter)
+    final sorted = List<ReadingLog>.from(widget.logs)
       ..sort((a, b) => b.date.compareTo(a.date));
     
     switch (_filter) {
@@ -289,11 +253,22 @@ class _BookHeader extends StatelessWidget {
           Container(
             width: 80,
             height: 120,
+            clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               color: Colors.grey[300],
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.menu_book, size: 40, color: Colors.grey),
+            // T3.7: render the real cover; fall back to the icon only when missing.
+            child: (book.coverImagePath != null && File(book.coverImagePath!).existsSync())
+                ? Image.file(
+                    File(book.coverImagePath!),
+                    width: 80,
+                    height: 120,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) =>
+                        const Icon(Icons.menu_book, size: 40, color: Colors.grey),
+                  )
+                : const Icon(Icons.menu_book, size: 40, color: Colors.grey),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -320,7 +295,9 @@ class _BookHeader extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    _Tag(label: 'Klasikler'),
+                    // T3.7: real category (only when set), not a hardcoded one.
+                    if (book.category != null && book.category!.isNotEmpty)
+                      _Tag(label: book.category!),
                     _Tag(label: '${book.totalPages} Sayfa'),
                   ],
                 ),

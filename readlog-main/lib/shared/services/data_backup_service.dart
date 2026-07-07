@@ -7,6 +7,9 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:share_plus/share_plus.dart';
 import 'local_storage_service.dart';
+import '../../features/books/domain/book.dart';
+import '../../features/reading/domain/reading_log.dart';
+import '../../features/profile/domain/user_profile.dart';
 
 final dataBackupServiceProvider = Provider<DataBackupService>((ref) {
   final localStorage = ref.watch(localStorageServiceProvider);
@@ -27,20 +30,20 @@ class DataBackupService {
 
   /// Tüm verileri ZIP arşivi olarak dışa aktarır (JSON + tüm dosyalar)
   Future<void> exportData() async {
+    File? zipFile;
     try {
-      final appDir = await getApplicationDocumentsDirectory();
       final archive = Archive();
 
       // 1. Metadata JSON oluştur
       final books = _localStorage.loadBooks();
       final logs = _localStorage.loadReadingLogs();
       final profile = _localStorage.loadProfile();
-      final isDarkMode = _localStorage.loadThemeMode();
+      final themeMode = _localStorage.loadThemeModeString();
 
       // Dosya path'lerini relative yap ve dosyaları arşive ekle
-      final processedBooks = await _processBookPaths(books, appDir, archive);
-      final processedLogs = await _processLogPaths(logs, appDir, archive);
-      final processedProfile = await _processProfilePath(profile, appDir, archive);
+      final processedBooks = await _processBookPaths(books, archive);
+      final processedLogs = await _processLogPaths(logs, archive);
+      final processedProfile = await _processProfilePath(profile, archive);
 
       final Map<String, dynamic> backupData = {
         'version': 2,
@@ -49,7 +52,8 @@ class DataBackupService {
         'readingLogs': processedLogs,
         'profile': processedProfile,
         'settings': {
-          'isDarkMode': isDarkMode,
+          // Canonical theme representation ('light'|'dark'|null=system).
+          'themeMode': themeMode,
         },
       };
 
@@ -61,7 +65,7 @@ class DataBackupService {
       final zipData = ZipEncoder().encode(archive);
 
       final tempDir = await getTemporaryDirectory();
-      final zipFile = File(
+      zipFile = File(
         '${tempDir.path}/libris_backup_${DateTime.now().millisecondsSinceEpoch}.zip',
       );
       await zipFile.writeAsBytes(zipData);
@@ -74,13 +78,19 @@ class DataBackupService {
       ));
     } catch (e) {
       throw Exception('Yedekleme hatası: $e');
+    } finally {
+      // T4.9: remove the temporary zip once sharing is done (best-effort).
+      if (zipFile != null) {
+        try {
+          if (await zipFile.exists()) await zipFile.delete();
+        } catch (_) {}
+      }
     }
   }
 
   /// Kitap verilerindeki dosya yollarını relative yap ve dosyaları arşive ekle
   Future<List<Map<String, dynamic>>> _processBookPaths(
     List<Map<String, dynamic>> books,
-    Directory appDir,
     Archive archive,
   ) async {
     final result = <Map<String, dynamic>>[];
@@ -106,7 +116,6 @@ class DataBackupService {
   /// Reading log verilerindeki dosya yollarını relative yap ve dosyaları arşive ekle
   Future<List<Map<String, dynamic>>> _processLogPaths(
     List<Map<String, dynamic>> logs,
-    Directory appDir,
     Archive archive,
   ) async {
     final result = <Map<String, dynamic>>[];
@@ -149,7 +158,6 @@ class DataBackupService {
   /// Profil verisindeki avatar yolunu relative yap ve dosyayı arşive ekle
   Future<Map<String, dynamic>?> _processProfilePath(
     Map<String, dynamic>? profile,
-    Directory appDir,
     Archive archive,
   ) async {
     if (profile == null) return null;
@@ -235,6 +243,10 @@ class DataBackupService {
     if (booksJson == null || logsJson == null) {
       throw Exception('Yedek dosyası eksik veri içeriyor');
     }
+    final profileJson = backupData['profile'];
+
+    // T1.5: validate EVERY record before touching disk/prefs (reject-all).
+    _validateRecords(booksJson, logsJson, profileJson);
 
     // Merge modda mevcut ID'leri al — dosya çıkartmayı atlamak için
     Set<String>? existingBookIds;
@@ -247,24 +259,19 @@ class DataBackupService {
     // Dosyaları arşivden cihaza çıkar ve path'leri güncelle
     final books = await _restoreBookFiles(booksJson, archive, appDir, skipIds: existingBookIds);
     final logs = await _restoreLogFiles(logsJson, archive, appDir, skipIds: existingLogIds);
-
-    // Profil ve ayarları geri yükle
-    final profileJson = backupData['profile'] as Map<String, dynamic>?;
-    if (profileJson != null) {
-      final restoredProfile = await _restoreProfileFiles(profileJson, archive, appDir);
-      await _localStorage.saveProfile(restoredProfile);
+    Map<String, dynamic>? restoredProfile;
+    if (profileJson is Map<String, dynamic>) {
+      restoredProfile = await _restoreProfileFiles(profileJson, archive, appDir);
     }
 
-    final settings = backupData['settings'] as Map<String, dynamic>?;
-    if (settings != null) {
-      final isDarkMode = settings['isDarkMode'] as bool?;
-      if (isDarkMode != null) {
-        await _localStorage.saveThemeMode(isDarkMode);
-      }
-    }
-
-    // Kitap ve log verilerini kaydet
-    await _mergeAndSave(books, logs, replaceExisting: replaceExisting);
+    // T1.5: prefs are written LAST, transactionally (snapshot + restore-on-fail).
+    await _persistTransactionally(
+      books: books,
+      logs: logs,
+      profile: restoredProfile,
+      settings: backupData['settings'],
+      replaceExisting: replaceExisting,
+    );
   }
 
   /// Eski JSON formatından içe aktarım (v1 geriye uyumluluk)
@@ -288,18 +295,36 @@ class DataBackupService {
     if (booksJson == null || logsJson == null) {
       throw Exception('Yedek dosyası eksik veri içeriyor');
     }
+    final profileJson = backupData['profile'];
 
-    final books = booksJson.map((item) => item as Map<String, dynamic>).toList();
-    final logs = logsJson.map((item) => item as Map<String, dynamic>).toList();
+    // T1.5: validate EVERY record before persisting anything (reject-all).
+    _validateRecords(booksJson, logsJson, profileJson);
 
-    // v1 JSON'da dosya path'leri mutlak — cihazda karşılığı yoksa temizle
+    final books = booksJson.map((item) => Map<String, dynamic>.from(item as Map)).toList();
+    final logs = logsJson.map((item) => Map<String, dynamic>.from(item as Map)).toList();
+
+    // No archive in the JSON path: both non-existent absolute paths AND relative
+    // archive paths are unusable → clean them (T1.5).
     _cleanInvalidPaths(books, 'coverImagePath');
     for (final log in logs) {
       _cleanInvalidPath(log, 'audioFilePath');
       _cleanInvalidPath(log, 'noteFilePath');
     }
 
-    await _mergeAndSave(books, logs, replaceExisting: replaceExisting);
+    // T1.5: import profile + settings in the JSON path too (was v2-only before).
+    Map<String, dynamic>? profile;
+    if (profileJson is Map<String, dynamic>) {
+      profile = Map<String, dynamic>.from(profileJson);
+      _cleanInvalidPath(profile, 'avatarImagePath');
+    }
+
+    await _persistTransactionally(
+      books: books,
+      logs: logs,
+      profile: profile,
+      settings: backupData['settings'],
+      replaceExisting: replaceExisting,
+    );
   }
 
   /// Arşivdeki kitap kapağı dosyalarını cihaza çıkar, path'leri güncelle
@@ -453,6 +478,69 @@ class DataBackupService {
     }
   }
 
+  /// Her kaydı kalıcılaştırmadan ÖNCE doğrular; tek bir geçersiz kayıt bile
+  /// varsa tüm içe aktarmayı reddeder (T1.5, reject-all).
+  void _validateRecords(
+    List<dynamic> booksJson,
+    List<dynamic> logsJson,
+    Object? profileJson,
+  ) {
+    for (final b in booksJson) {
+      if (b is! Map<String, dynamic> || Book.tryParse(b) == null) {
+        throw Exception('Yedek dosyasında geçersiz kitap kaydı var; içe aktarma iptal edildi.');
+      }
+    }
+    for (final l in logsJson) {
+      if (l is! Map<String, dynamic> || ReadingLog.tryParse(l) == null) {
+        throw Exception('Yedek dosyasında geçersiz okuma kaydı var; içe aktarma iptal edildi.');
+      }
+    }
+    if (profileJson != null) {
+      if (profileJson is! Map<String, dynamic> || UserProfile.tryParse(profileJson) == null) {
+        throw Exception('Yedek dosyasında geçersiz profil kaydı var; içe aktarma iptal edildi.');
+      }
+    }
+  }
+
+  /// Prefs'i işlemsel olarak yazar: önce anlık görüntü alır, herhangi bir yazma
+  /// hata verirse görüntüyü geri yükler (T1.5). Böylece bozuk bir yedek verileri
+  /// yarım yazılı bırakamaz.
+  Future<void> _persistTransactionally({
+    required List<Map<String, dynamic>> books,
+    required List<Map<String, dynamic>> logs,
+    Map<String, dynamic>? profile,
+    Object? settings,
+    required bool replaceExisting,
+  }) async {
+    final snapshot = _localStorage.snapshot();
+    try {
+      if (profile != null) {
+        await _localStorage.saveProfile(profile);
+      }
+      await _restoreThemeFromSettings(settings);
+      await _mergeAndSave(books, logs, replaceExisting: replaceExisting);
+    } catch (e) {
+      await _localStorage.restore(snapshot);
+      rethrow;
+    }
+  }
+
+  /// Yedekteki tema ayarını kanonik forma çevirip kaydeder (T1.6).
+  /// Yeni yedekler `themeMode` (string), eski yedekler `isDarkMode` (bool) taşır.
+  Future<void> _restoreThemeFromSettings(Object? settings) async {
+    if (settings is! Map<String, dynamic>) return;
+    String? mode;
+    final rawMode = settings['themeMode'];
+    if (rawMode is String) {
+      mode = rawMode;
+    } else if (settings['isDarkMode'] is bool) {
+      mode = (settings['isDarkMode'] as bool) ? 'dark' : 'light';
+    }
+    if (mode != null) {
+      await _localStorage.saveThemeModeString(mode);
+    }
+  }
+
   /// v1 JSON'lardaki mutlak dosya yollarını, dosya yoksa null yap
   void _cleanInvalidPaths(List<Map<String, dynamic>> items, String key) {
     for (final item in items) {
@@ -462,10 +550,13 @@ class DataBackupService {
 
   void _cleanInvalidPath(Map<String, dynamic> item, String key) {
     final path = item[key] as String?;
-    if (path != null && path.startsWith('/')) {
-      if (!File(path).existsSync()) {
-        item[key] = null;
-      }
+    if (path == null || path.isEmpty) return;
+    if (!path.startsWith('/')) {
+      // Relative archive path (e.g. "book_covers/x.jpg") but no archive to
+      // extract from in the JSON path — unusable, so null it out (T1.5).
+      item[key] = null;
+    } else if (!File(path).existsSync()) {
+      item[key] = null;
     }
   }
 }

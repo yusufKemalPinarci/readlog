@@ -11,12 +11,13 @@ class ConnectivityService {
     return results.isNotEmpty && !results.contains(ConnectivityResult.none);
   }
 
-  /// İnternet bağlantısı durumunu stream olarak dinle
-  Stream<ConnectivityResult> get connectivityStream {
-    return _connectivity.onConnectivityChanged.map((results) {
-      // İlk sonucu döndür, yoksa none
-      return results.isNotEmpty ? results.first : ConnectivityResult.none;
-    });
+  /// İnternet bağlantısı durumunu stream olarak dinle.
+  /// T4.14: connected if ANY interface is up (don't just take the arbitrary
+  /// first result — [none, wifi] would otherwise read as offline).
+  Stream<bool> get connectedStream {
+    return _connectivity.onConnectivityChanged.map(
+      (results) => results.any((r) => r != ConnectivityResult.none),
+    );
   }
 
   /// WiFi bağlı mı?
@@ -36,18 +37,20 @@ final connectivityServiceProvider = Provider<ConnectivityService>((ref) {
   return ConnectivityService();
 });
 
-/// İnternet bağlantısı durumu provider'ı
-final connectivityProvider = StreamProvider<ConnectivityResult>((ref) {
+/// İnternet bağlantısı akışı (bağlı mı?).
+final connectivityProvider = StreamProvider<bool>((ref) {
   final service = ref.watch(connectivityServiceProvider);
-  return service.connectivityStream;
+  return service.connectedStream;
 });
 
 /// İnternet bağlı mı? (bool)
-final isConnectedProvider = StreamProvider<bool>((ref) {
-  final connectivity = ref.watch(connectivityProvider);
-  return connectivity.when(
-    data: (result) => Stream.value(result != ConnectivityResult.none),
-    loading: () => Stream.value(false),
-    error: (_, __) => Stream.value(false),
-  );
+///
+/// T4.14: a plain derived bool (not a second StreamProvider). While the first
+/// connectivity result is still loading — or on error — assume connected, so the
+/// offline banner never flashes on startup or after a reconnect.
+final isConnectedProvider = Provider<bool>((ref) {
+  return ref.watch(connectivityProvider).maybeWhen(
+        data: (connected) => connected,
+        orElse: () => true,
+      );
 });

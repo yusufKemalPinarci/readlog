@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../reading/domain/reading_log.dart';
 import 'package:go_router/go_router.dart';
-import '../../../books/application/books_vm.dart';
 
 class ReadingCalendarWidget extends StatefulWidget {
   const ReadingCalendarWidget({
@@ -111,34 +110,32 @@ class _WeeklyChart extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final booksVm = ref.watch(booksVmProvider.notifier);
     final now = DateTime.now();
     // Son 7 günü bul
     final weekDays = List.generate(7, (index) {
-      final date = now.subtract(Duration(days: 6 - index));
-      return DateTime(date.year, date.month, date.day);
+      // T2.5: DST-safe day stepping.
+      return DateTime(now.year, now.month, now.day - (6 - index));
     });
 
-    // Sadece mevcut kitapların loglarını filtrele
-    final validLogs = logs.where((log) {
-      final book = booksVm.byId(log.bookId);
-      return book != null;
-    }).toList();
+    // T2.11: logs of deleted books count everywhere (streak already includes
+    // them), so don't filter them out of the weekly chart.
+    final validLogs = logs;
 
-    // Günlük logları grupla
+    // Günlük logları grupla.
+    // T2.8: accumulate SECONDS (effectiveDurationSeconds), so sub-minute
+    // sessions still register on the chart instead of collapsing to 0 minutes.
     final logsByDay = <DateTime, List<ReadingLog>>{};
-    final pagesByDay = <DateTime, int>{};
+    final durationByDay = <DateTime, int>{};
     for (var log in validLogs) {
        final date = DateTime(log.date.year, log.date.month, log.date.day);
        logsByDay.putIfAbsent(date, () => []).add(log);
-       final current = pagesByDay[date] ?? 0;
-       pagesByDay[date] = current + log.minutes;
+       durationByDay[date] = (durationByDay[date] ?? 0) + log.effectiveDurationSeconds;
     }
 
     // Maksimum değeri bul (grafik ölçekleme için)
-    int maxMinutes = 1;
-    for (var m in pagesByDay.values) {
-      if (m > maxMinutes) maxMinutes = m;
+    int maxSeconds = 1;
+    for (final s in durationByDay.values) {
+      if (s > maxSeconds) maxSeconds = s;
     }
 
     return Container(
@@ -148,9 +145,10 @@ class _WeeklyChart extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: weekDays.map((date) {
-          final minutes = pagesByDay[date] ?? 0;
+          final seconds = durationByDay[date] ?? 0;
+          final minutes = (seconds / 60).round();
           final dayLogs = logsByDay[date] ?? [];
-          final heightFactor = minutes / maxMinutes;
+          final heightFactor = seconds / maxSeconds;
            
           final isToday = date.year == now.year && date.month == now.month && date.day == now.day;
           
@@ -161,7 +159,7 @@ class _WeeklyChart extends ConsumerWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                 if (minutes > 0)
+                 if (seconds > 0)
                   Text(
                     '$minutes\ndk',
                     textAlign: TextAlign.center,
@@ -226,19 +224,15 @@ class _MonthlyCalendar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-      final booksVm = ref.watch(booksVmProvider.notifier);
       final now = DateTime.now();
       final isCurrentMonth = focusedMonth.year == now.year && focusedMonth.month == now.month;
       
       final firstDayOfMonth = DateTime(focusedMonth.year, focusedMonth.month, 1);
       final daysInMonth = DateUtils.getDaysInMonth(focusedMonth.year, focusedMonth.month);
       
-      // Sadece mevcut kitapların loglarını filtrele
-      final validLogs = logs.where((log) {
-        final book = booksVm.byId(log.bookId);
-        return book != null;
-      }).toList();
-      
+      // T2.11: include deleted books' logs (consistent with streak/day-detail).
+      final validLogs = logs;
+
       final logsByDate = <DateTime, List<ReadingLog>>{};
       for (var log in validLogs) {
         final date = DateTime(log.date.year, log.date.month, log.date.day);

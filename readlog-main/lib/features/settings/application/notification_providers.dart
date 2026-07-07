@@ -9,7 +9,7 @@ final notificationSettingsProvider = StateNotifierProvider<NotificationSettingsN
 
 class NotificationSettings {
   const NotificationSettings({
-    this.enabled = true,
+    this.enabled = false, // T2.26: OFF until the user opts in (permission consent)
     this.hour = 20,
     this.minute = 0,
   });
@@ -43,16 +43,33 @@ class NotificationSettingsNotifier extends StateNotifier<NotificationSettings> {
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
     state = NotificationSettings(
-      enabled: prefs.getBool(_keyEnabled) ?? true,
+      enabled: prefs.getBool(_keyEnabled) ?? false, // T2.26: default OFF
       hour: prefs.getInt(_keyHour) ?? 20,
       minute: prefs.getInt(_keyMinute) ?? 0,
     );
-    // Uygulama açıldığında (yeniden başlatma sonrası dahil) bildirimi yeniden planla
-    await _updateNotificationSchedule();
+    // T2.26: only touch the notification plugin (and its permission prompts)
+    // when the user has previously enabled reminders — never on a fresh install.
+    if (state.enabled) {
+      await _updateNotificationSchedule();
+    }
   }
 
   Future<void> setEnabled(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
+    if (enabled) {
+      // T2.26: request POST_NOTIFICATIONS only at the moment of opt-in. If the
+      // user refuses, keep reminders off instead of pretending they're on.
+      final service = NotificationService();
+      try {
+        await service.initialize();
+      } catch (_) {}
+      final granted = await service.requestPermission();
+      if (!granted) {
+        await prefs.setBool(_keyEnabled, false);
+        state = state.copyWith(enabled: false);
+        return;
+      }
+    }
     await prefs.setBool(_keyEnabled, enabled);
     state = state.copyWith(enabled: enabled);
     await _updateNotificationSchedule();
@@ -67,18 +84,23 @@ class NotificationSettingsNotifier extends StateNotifier<NotificationSettings> {
   }
 
   Future<void> _updateNotificationSchedule() async {
-    final notificationService = NotificationService();
-    await notificationService.initialize();
-    
-    if (state.enabled) {
-      await notificationService.scheduleDailyReminder(
-        hour: state.hour,
-        minute: state.minute,
-        title: 'Okuma Zamanı! 📚',
-        body: 'Günlük okuma hedefinize ulaşmak için bugün de okumaya devam edin.',
-      );
-    } else {
-      await notificationService.cancelDailyReminder();
+    // T2.26: notification failures must never propagate to the UI/startup.
+    try {
+      final notificationService = NotificationService();
+      await notificationService.initialize();
+
+      if (state.enabled) {
+        await notificationService.scheduleDailyReminder(
+          hour: state.hour,
+          minute: state.minute,
+          title: 'Okuma Zamanı! 📚',
+          body: 'Günlük okuma hedefinize ulaşmak için bugün de okumaya devam edin.',
+        );
+      } else {
+        await notificationService.cancelDailyReminder();
+      }
+    } catch (_) {
+      // Yoksay — bildirim planlaması kritik değil.
     }
   }
 }
