@@ -245,17 +245,27 @@ Every review finding maps to a task: criticals 1–10 → T1.1–T1.12 (+T0.3); 
 - `flutter analyze` needs `--no-pub` on this machine (or Windows Developer Mode)
   because plain analyze tries to build the plugin registrant (symlinks).
 
+**Phase 4 (refactors) — done:** T4.3 (duration formatter consolidation),
+T4.4 (merge image services), T4.5 (in-memory test double), T4.6 (input
+hardening / digitsOnly), T4.8 (barcode overlay + awaited toggles), T4.9 (backup
+temp-zip cleanup), T4.10 (UTF-8 notes), T4.11 (permission text / no legacy
+storage), T4.12 (audio hygiene), T4.13 (VM load error handling), T4.14 (offline
+banner), T4.15 (copy fixes).
+
+**Phase 5 (tests) — done:** regression tests written inline with each fix, plus
+T5.2 (ActiveReadingVm fake-clock/fake-recorder via extracted AudioRecorderPort)
+and T5.6 (books_vm_test rewrite: no flake, mutations + LocalBooksRepository).
+Total: 196 tests across 28 files, all green.
+
 **Deferred (documented, not blocking):**
 - **T3.4 remainder**: `_CongratsStep` (a now-unreachable PageView child — harmless)
   and `clearAll` (kept; no settings "reset" caller added).
-- **Phase 4 (T4.1–T4.16 refactors/dedup)**: polish. The correctness underneath
-  each was fixed. T4.3 partially done (`duration_format.dart` util exists; full
-  per-screen formatter dedup pending). T4.16 (repo restructure) needs user sign-off.
-- **Phase 5 (T5.1–T5.7)**: substantial regression tests were written inline with
-  each fix (finish-vm, image storage, copyWith sentinels, safe-parse, corruption,
-  backup import, reorder, daily-goal, calendar day-detail, streak DST, midnight
-  boundary, re-read, reading-stats). Formal per-surface consolidation is the
-  remaining gap; the critical coverage exists.
+- **T4.1 / T4.2** (extract shared AudioPlayerWidget / image-pick sheet): pure
+  widget-dedup, highest-risk/lowest-value — the broken audio copy was already
+  point-fixed (T2.16) and the flows work. **T4.7** (active-reading rebuild
+  scoping): perf-only. **T4.16** (repo restructure): needs user sign-off.
+- **T5.7**: the daily-goal and calendar day-detail widget tests exist; add-book
+  double-tap and per-shelf edit-menu widget tests are the remaining gap.
 
 **Phase X verification:**
 - `flutter analyze --no-pub` → **0 issues**.
