@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 
 import '../../../app/router/app_router.dart';
 import '../../books/application/books_vm.dart';
+import '../../../shared/utils/duration_format.dart';
 import '../../../shared/widgets/book_scaffold.dart';
 import '../../books/domain/book.dart';
 import '../application/reading_providers.dart';
@@ -14,21 +15,7 @@ import '../domain/reading_log.dart';
 import '../../../shared/widgets/book_loading_widget.dart';
 
 // Süre formatlama yardımcı fonksiyonu (saniye cinsinden alır)
-String _formatDuration(int totalSeconds) {
-  if (totalSeconds < 60) {
-    return '$totalSeconds sn';
-  } else if (totalSeconds < 3600) {
-    final minutes = totalSeconds ~/ 60;
-    final seconds = totalSeconds % 60;
-    if (seconds == 0) return '$minutes dk';
-    return '$minutes dk $seconds sn';
-  } else {
-    final hours = totalSeconds ~/ 3600;
-    final minutes = (totalSeconds % 3600) ~/ 60;
-    if (minutes == 0) return '$hours sa';
-    return '$hours sa $minutes dk';
-  }
-}
+String _formatDuration(int totalSeconds) => formatSecondsHuman(totalSeconds); // T4.3
 
 class BookReadingLogsScreen extends ConsumerStatefulWidget {
   const BookReadingLogsScreen({

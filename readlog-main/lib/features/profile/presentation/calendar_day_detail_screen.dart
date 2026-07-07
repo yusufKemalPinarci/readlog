@@ -8,27 +8,14 @@ import 'package:intl/intl.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../../shared/widgets/book_scaffold.dart';
 import '../../../../shared/utils/reading_stats.dart';
+import '../../../../shared/utils/duration_format.dart';
 import '../../books/application/books_vm.dart';
 import '../../books/domain/book.dart';
 import '../../reading/application/reading_providers.dart';
 import '../../reading/domain/reading_log.dart';
 
-// Süre formatlama yardımcı fonksiyonu
-String _formatDuration(int totalSeconds) {
-  if (totalSeconds < 60) {
-    return '$totalSeconds sn';
-  } else if (totalSeconds < 3600) {
-    final minutes = totalSeconds ~/ 60;
-    final seconds = totalSeconds % 60;
-    if (seconds == 0) return '$minutes dk';
-    return '$minutes dk $seconds sn';
-  } else {
-    final hours = totalSeconds ~/ 3600;
-    final minutes = (totalSeconds % 3600) ~/ 60;
-    if (minutes == 0) return '$hours sa';
-    return '$hours sa $minutes dk';
-  }
-}
+// T4.3: single canonical formatter (shared/utils/duration_format.dart).
+String _formatDuration(int totalSeconds) => formatSecondsHuman(totalSeconds);
 
 class CalendarDayDetailScreen extends ConsumerWidget {
   const CalendarDayDetailScreen({

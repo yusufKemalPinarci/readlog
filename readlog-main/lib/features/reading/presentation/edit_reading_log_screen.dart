@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
+import '../../../shared/utils/duration_format.dart';
 import '../../../shared/widgets/book_scaffold.dart';
 import '../../../shared/widgets/confirm_dialog.dart';
 import '../application/reading_providers.dart';
@@ -91,17 +92,7 @@ class _EditReadingLogScreenState extends ConsumerState<EditReadingLogScreen> {
     });
   }
 
-  String _formatEditDuration(int totalSeconds) {
-    if (totalSeconds < 60) return '$totalSeconds sn';
-    if (totalSeconds < 3600) {
-      final min = totalSeconds ~/ 60;
-      final sec = totalSeconds % 60;
-      return sec == 0 ? '$min dk' : '$min dk $sec sn';
-    }
-    final hrs = totalSeconds ~/ 3600;
-    final min = (totalSeconds % 3600) ~/ 60;
-    return min == 0 ? '$hrs sa' : '$hrs sa $min dk';
-  }
+  String _formatEditDuration(int totalSeconds) => formatSecondsHuman(totalSeconds); // T4.3
 
   Future<void> _selectDate(BuildContext context) async {
     final picked = await showDatePicker(
