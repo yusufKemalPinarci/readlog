@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -307,6 +308,7 @@ class _EditReadingLogScreenState extends ConsumerState<EditReadingLogScreen> {
                     child: TextField(
                       controller: _hoursCtrl,
                       keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly], // T4.6
                       decoration: const InputDecoration(
                         hintText: 'Saat',
                         suffixText: 'sa',
@@ -320,6 +322,7 @@ class _EditReadingLogScreenState extends ConsumerState<EditReadingLogScreen> {
                     child: TextField(
                       controller: _minutesPartCtrl,
                       keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly], // T4.6
                       decoration: const InputDecoration(
                         hintText: 'Dakika',
                         suffixText: 'dk',
@@ -333,6 +336,7 @@ class _EditReadingLogScreenState extends ConsumerState<EditReadingLogScreen> {
                     child: TextField(
                       controller: _secondsPartCtrl,
                       keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly], // T4.6
                       decoration: const InputDecoration(
                         hintText: 'Saniye',
                         suffixText: 'sn',

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../app/router/app_router.dart';
@@ -749,6 +750,7 @@ class _AddBookScreenState extends ConsumerState<AddBookScreen> {
             hintText: 'Örn. 350',
             icon: Icons.numbers,
             keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly], // T4.6
             controller: pagesCtrl,
           ),
           if (_currentShelf == BookShelf.read) ...[
@@ -826,6 +828,7 @@ class _TextFieldCard extends StatelessWidget {
     required this.icon,
     required this.controller,
     this.keyboardType,
+    this.inputFormatters,
   });
 
   final String label;
@@ -833,6 +836,7 @@ class _TextFieldCard extends StatelessWidget {
   final IconData icon;
   final TextEditingController controller;
   final TextInputType? keyboardType;
+  final List<TextInputFormatter>? inputFormatters;
 
   @override
   Widget build(BuildContext context) {
@@ -855,6 +859,7 @@ class _TextFieldCard extends StatelessWidget {
               child: TextField(
                 controller: controller,
                 keyboardType: keyboardType,
+                inputFormatters: inputFormatters,
                 decoration: InputDecoration(
                   labelText: label,
                   hintText: hintText,
