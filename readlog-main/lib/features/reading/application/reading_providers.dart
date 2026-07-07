@@ -17,8 +17,13 @@ class ReadingLogsNotifier extends StateNotifier<List<ReadingLog>> {
   final ReadingLogsRepository _repo;
 
   Future<void> _loadLogs() async {
-    final logs = await _repo.listAll();
-    state = logs;
+    // T4.13: a load failure keeps the last good state rather than throwing into
+    // the provider (which would leave listeners with an unhandled error).
+    try {
+      state = await _repo.listAll();
+    } catch (_) {
+      // keep previous state
+    }
   }
 
   Future<void> addLog(ReadingLog log) async {

@@ -6,15 +6,23 @@ import '../domain/book.dart';
 import 'books_providers.dart';
 import '../../../shared/services/image_storage_service.dart';
 
+/// Sentinel so BooksState.copyWith can clear the error.
+const Object _unset = Object();
+
 @immutable
 class BooksState {
-  const BooksState({required this.items, this.isLoading = false});
+  const BooksState({required this.items, this.isLoading = false, this.error});
 
   final List<Book> items;
   final bool isLoading;
+  final String? error; // T4.13: surfaces a load failure instead of loading forever
 
-  BooksState copyWith({List<Book>? items, bool? isLoading}) {
-    return BooksState(items: items ?? this.items, isLoading: isLoading ?? this.isLoading);
+  BooksState copyWith({List<Book>? items, bool? isLoading, Object? error = _unset}) {
+    return BooksState(
+      items: items ?? this.items,
+      isLoading: isLoading ?? this.isLoading,
+      error: identical(error, _unset) ? this.error : error as String?,
+    );
   }
 }
 
@@ -26,8 +34,13 @@ class BooksVm extends StateNotifier<BooksState> {
   final BooksRepository _repo;
 
   Future<void> _load() async {
-    final items = await _repo.list();
-    state = state.copyWith(items: items, isLoading: false);
+    // T4.13: never leave the UI stuck in isLoading; surface the error instead.
+    try {
+      final items = await _repo.list();
+      state = state.copyWith(items: items, isLoading: false, error: null);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+    }
   }
 
   /// Reload from the (singleton) repository — used after a backup import so the
