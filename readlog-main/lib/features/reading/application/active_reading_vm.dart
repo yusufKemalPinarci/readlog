@@ -47,12 +47,12 @@ class ActiveReadingState {
 }
 
 class ActiveReadingVm extends StateNotifier<ActiveReadingState> {
-  ActiveReadingVm({AudioRecordingService? audioService, DateTime Function()? clock})
+  ActiveReadingVm({AudioRecorderPort? audioService, DateTime Function()? clock})
       : _audioService = audioService ?? AudioRecordingService(),
         _now = clock ?? DateTime.now,
         super(const ActiveReadingState());
 
-  final AudioRecordingService _audioService;
+  final AudioRecorderPort _audioService;
   final DateTime Function() _now;
   Timer? _timer;
   Timer? _recordingTimer;

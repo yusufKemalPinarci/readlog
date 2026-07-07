@@ -3,12 +3,27 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 
-class AudioRecordingService {
+/// The recording surface ActiveReadingVm depends on. Extracting it (T5.2) lets
+/// the VM be driven by a fake in tests without constructing a real AudioRecorder.
+abstract class AudioRecorderPort {
+  bool get isRecording;
+  String? get currentRecordingPath;
+  Future<bool> startRecording(String logId);
+  Future<void> pauseRecording();
+  Future<void> resumeRecording();
+  Future<String?> stopRecording();
+  Future<void> cancelRecording();
+  Future<void> dispose();
+}
+
+class AudioRecordingService implements AudioRecorderPort {
   final AudioRecorder _recorder = AudioRecorder();
   String? _currentRecordingPath;
   bool _isRecording = false;
 
+  @override
   bool get isRecording => _isRecording;
+  @override
   String? get currentRecordingPath => _currentRecordingPath;
 
   /// Mikrofon iznini kontrol et ve iste
@@ -58,6 +73,7 @@ class AudioRecordingService {
   }
 
   /// Ses kaydını başlat
+  @override
   Future<bool> startRecording(String logId) async {
     if (_isRecording) {
       return false;
@@ -112,6 +128,7 @@ class AudioRecordingService {
 
   /// Kaydı geçici olarak duraklat (dosyayı kapatmadan). T2.1: böylece devam
   /// ettirildiğinde aynı dosyaya yazılır ve segmentler kaybolmaz.
+  @override
   Future<void> pauseRecording() async {
     if (!_isRecording) return;
     try {
@@ -122,6 +139,7 @@ class AudioRecordingService {
   }
 
   /// Duraklatılmış kaydı aynı dosyaya devam ettir (T2.1).
+  @override
   Future<void> resumeRecording() async {
     if (!_isRecording) return;
     try {
@@ -130,6 +148,7 @@ class AudioRecordingService {
   }
 
   /// Ses kaydını durdur
+  @override
   Future<String?> stopRecording() async {
     if (!_isRecording) {
       return null;
@@ -149,6 +168,7 @@ class AudioRecordingService {
   }
 
   /// Kaydı iptal et (dosyayı sil)
+  @override
   Future<void> cancelRecording() async {
     if (_isRecording) {
       // T4.12: never let a failing stop() wedge _isRecording at true.
@@ -171,6 +191,7 @@ class AudioRecordingService {
     }
   }
 
+  @override
   Future<void> dispose() async {
     // T4.12: actually await the recorder disposal.
     try {
