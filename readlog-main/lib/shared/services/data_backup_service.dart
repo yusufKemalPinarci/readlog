@@ -30,8 +30,8 @@ class DataBackupService {
 
   /// Tüm verileri ZIP arşivi olarak dışa aktarır (JSON + tüm dosyalar)
   Future<void> exportData() async {
+    File? zipFile;
     try {
-      final appDir = await getApplicationDocumentsDirectory();
       final archive = Archive();
 
       // 1. Metadata JSON oluştur
@@ -41,9 +41,9 @@ class DataBackupService {
       final themeMode = _localStorage.loadThemeModeString();
 
       // Dosya path'lerini relative yap ve dosyaları arşive ekle
-      final processedBooks = await _processBookPaths(books, appDir, archive);
-      final processedLogs = await _processLogPaths(logs, appDir, archive);
-      final processedProfile = await _processProfilePath(profile, appDir, archive);
+      final processedBooks = await _processBookPaths(books, archive);
+      final processedLogs = await _processLogPaths(logs, archive);
+      final processedProfile = await _processProfilePath(profile, archive);
 
       final Map<String, dynamic> backupData = {
         'version': 2,
@@ -65,7 +65,7 @@ class DataBackupService {
       final zipData = ZipEncoder().encode(archive);
 
       final tempDir = await getTemporaryDirectory();
-      final zipFile = File(
+      zipFile = File(
         '${tempDir.path}/libris_backup_${DateTime.now().millisecondsSinceEpoch}.zip',
       );
       await zipFile.writeAsBytes(zipData);
@@ -78,13 +78,19 @@ class DataBackupService {
       ));
     } catch (e) {
       throw Exception('Yedekleme hatası: $e');
+    } finally {
+      // T4.9: remove the temporary zip once sharing is done (best-effort).
+      if (zipFile != null) {
+        try {
+          if (await zipFile.exists()) await zipFile.delete();
+        } catch (_) {}
+      }
     }
   }
 
   /// Kitap verilerindeki dosya yollarını relative yap ve dosyaları arşive ekle
   Future<List<Map<String, dynamic>>> _processBookPaths(
     List<Map<String, dynamic>> books,
-    Directory appDir,
     Archive archive,
   ) async {
     final result = <Map<String, dynamic>>[];
@@ -110,7 +116,6 @@ class DataBackupService {
   /// Reading log verilerindeki dosya yollarını relative yap ve dosyaları arşive ekle
   Future<List<Map<String, dynamic>>> _processLogPaths(
     List<Map<String, dynamic>> logs,
-    Directory appDir,
     Archive archive,
   ) async {
     final result = <Map<String, dynamic>>[];
@@ -153,7 +158,6 @@ class DataBackupService {
   /// Profil verisindeki avatar yolunu relative yap ve dosyayı arşive ekle
   Future<Map<String, dynamic>?> _processProfilePath(
     Map<String, dynamic>? profile,
-    Directory appDir,
     Archive archive,
   ) async {
     if (profile == null) return null;
