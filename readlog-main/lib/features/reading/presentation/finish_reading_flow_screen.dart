@@ -928,8 +928,6 @@ class _NoteEditor extends StatefulWidget {
 }
 
 class _NoteEditorState extends State<_NoteEditor> {
-  bool _isBold = false;
-  bool _isItalic = false;
 
   Future<void> _pickImage() async {
     final source = await showModalBottomSheet<ImageSource>(
@@ -993,27 +991,12 @@ class _NoteEditorState extends State<_NoteEditor> {
             color: Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(12),
           ),
+          // T4.15: the bold/italic toggles only restyled the whole input field
+          // and never persisted (notes are plain text), so they're removed
+          // rather than pretending to offer rich-text formatting.
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _ToolbarButton(
-                icon: Icons.format_bold,
-                isActive: _isBold,
-                onPressed: () {
-                  setState(() {
-                    _isBold = !_isBold;
-                  });
-                },
-              ),
-              _ToolbarButton(
-                icon: Icons.format_italic,
-                isActive: _isItalic,
-                onPressed: () {
-                  setState(() {
-                    _isItalic = !_isItalic;
-                  });
-                },
-              ),
               _ToolbarButton(
                 icon: Icons.add_photo_alternate_outlined,
                 isActive: widget.imagePath != null,
@@ -1069,8 +1052,6 @@ class _NoteEditorState extends State<_NoteEditor> {
                   fontSize: 16,
                   height: 1.8,
                   color: Theme.of(context).textTheme.bodyLarge?.color,
-                  fontWeight: _isBold ? FontWeight.bold : FontWeight.normal,
-                  fontStyle: _isItalic ? FontStyle.italic : FontStyle.normal,
                 ),
                 decoration: InputDecoration(
                   hintText: 'Aklında kalan bir cümle, bir düşünce ya da bir his...',
