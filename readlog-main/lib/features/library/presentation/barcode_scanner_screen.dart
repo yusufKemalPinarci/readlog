@@ -12,8 +12,6 @@ class BarcodeScannerScreen extends StatefulWidget {
 class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
   late MobileScannerController controller;
   bool _isScanned = false; // Prevent multiple scans
-  bool _isTorchOn = false;
-  bool _isFrontCamera = false;
 
   @override
   void initState() {
@@ -46,27 +44,27 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
       appBar: AppBar(
         title: const Text('Barkod Tarayıcı'),
         actions: [
+          // T4.8: await the async toggles and reflect the controller's actual
+          // state instead of optimistically flipping a local flag.
           IconButton(
             icon: Icon(
-              _isTorchOn ? Icons.flash_on : Icons.flash_off,
-              color: _isTorchOn ? Colors.yellow : Colors.grey,
+              controller.value.torchState == TorchState.on ? Icons.flash_on : Icons.flash_off,
+              color: controller.value.torchState == TorchState.on ? Colors.yellow : Colors.grey,
             ),
-            onPressed: () {
-              controller.toggleTorch();
-              setState(() {
-                _isTorchOn = !_isTorchOn;
-              });
+            onPressed: () async {
+              await controller.toggleTorch();
+              if (mounted) setState(() {});
             },
           ),
           IconButton(
             icon: Icon(
-              _isFrontCamera ? Icons.camera_front : Icons.camera_rear,
+              controller.value.cameraDirection == CameraFacing.front
+                  ? Icons.camera_front
+                  : Icons.camera_rear,
             ),
-            onPressed: () {
-              controller.switchCamera();
-              setState(() {
-                _isFrontCamera = !_isFrontCamera;
-              });
+            onPressed: () async {
+              await controller.switchCamera();
+              if (mounted) setState(() {});
             },
           ),
         ],
@@ -99,7 +97,9 @@ class QrScannerOverlayShape extends ShapeBorder {
   const QrScannerOverlayShape({
     this.borderColor = Colors.red,
     this.borderWidth = 10.0,
-    this.overlayColor = const Color.fromRGBO(0, 0, 0, 80),
+    // T4.8: fromRGBO's 4th arg is opacity (0..1); 80 was clamped to 1.0 → a
+    // fully-opaque black overlay. Use ARGB alpha 80/255 (~31%) as intended.
+    this.overlayColor = const Color.fromARGB(80, 0, 0, 0),
     this.borderRadius = 0,
     this.borderLength = 40,
     this.cutOutSize = 250,
