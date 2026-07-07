@@ -2,23 +2,37 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+/// Stores images (book covers, profile avatars) in an app-private directory.
+/// T4.4: a single parameterized service, replacing the byte-identical
+/// ImageStorageService + ProfileImageStorageService pair.
 class ImageStorageService {
-  static const String _imagesDirectoryName = 'book_covers';
+  ImageStorageService({
+    this.directoryName = 'book_covers',
+    this.filePrefix = 'cover_',
+  });
 
-  /// Kitap kapakları için dizin yolunu al
+  /// Profile-avatar variant (was ProfileImageStorageService).
+  factory ImageStorageService.profile() => ImageStorageService(
+        directoryName: 'profile_images',
+        filePrefix: 'avatar_',
+      );
+
+  final String directoryName;
+  final String filePrefix;
+
   Future<Directory> _getImagesDirectory() async {
     final appDir = await getApplicationDocumentsDirectory();
-    final imagesDir = Directory('${appDir.path}/$_imagesDirectoryName');
+    final imagesDir = Directory('${appDir.path}/$directoryName');
     if (!await imagesDir.exists()) {
       await imagesDir.create(recursive: true);
     }
     return imagesDir;
   }
 
-  /// Kitap kapağı resmi dosya yolunu al
-  Future<String> getImageFilePath(String bookId) async {
+  /// Resim dosya yolunu al
+  Future<String> getImageFilePath(String id) async {
     final imagesDir = await _getImagesDirectory();
-    return '${imagesDir.path}/cover_$bookId.jpg';
+    return '${imagesDir.path}/$filePrefix$id.jpg';
   }
 
   /// Resmi dosyaya kaydet (kopyala).

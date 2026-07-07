@@ -7,7 +7,7 @@ import 'package:image_cropper/image_cropper.dart';
 import '../../../shared/utils/image_helper.dart';
 
 import '../application/profile_providers.dart';
-import '../../../shared/services/profile_image_storage_service.dart';
+import '../../../shared/services/image_storage_service.dart';
 import '../../../shared/widgets/book_scaffold.dart';
 import '../../../shared/services/permission_service.dart';
 
@@ -22,7 +22,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _usernameCtrl;
   final ImagePicker _imagePicker = ImagePicker();
-  final ProfileImageStorageService _imageService = ProfileImageStorageService();
+  final ImageStorageService _imageService = ImageStorageService.profile();
   bool _isSaving = false;
   bool _controllersInitialized = false;
   File? _selectedImage;
