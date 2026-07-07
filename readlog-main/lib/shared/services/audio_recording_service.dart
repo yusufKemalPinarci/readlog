@@ -151,10 +151,13 @@ class AudioRecordingService {
   /// Kaydı iptal et (dosyayı sil)
   Future<void> cancelRecording() async {
     if (_isRecording) {
-      await _recorder.stop();
+      // T4.12: never let a failing stop() wedge _isRecording at true.
+      try {
+        await _recorder.stop();
+      } catch (_) {}
       _isRecording = false;
     }
-    
+
     if (_currentRecordingPath != null) {
       try {
         final file = File(_currentRecordingPath!);
@@ -168,8 +171,11 @@ class AudioRecordingService {
     }
   }
 
-  void dispose() {
-    _recorder.dispose();
+  Future<void> dispose() async {
+    // T4.12: actually await the recorder disposal.
+    try {
+      await _recorder.dispose();
+    } catch (_) {}
   }
 }
 

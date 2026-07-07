@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
@@ -30,22 +31,31 @@ class NoteStorageService {
 
     final filePath = await getNoteFilePath(logId);
     final file = File(filePath);
-    await file.writeAsString(note, encoding: const SystemEncoding());
+    // T4.10: explicit UTF-8 so Turkish characters aren't mangled by the
+    // platform's default SystemEncoding.
+    await file.writeAsString(note, encoding: utf8);
   }
 
-  /// Notu dosyadan oku
+  /// Notu dosyadan oku. Dosya yoksa null döner (eksik not); dosya varsa ama
+  /// çözümlenemezse legacy kodlama için hoşgörülü çözümleme dener (T4.10).
   Future<String?> readNote(String logId) async {
     final filePath = await getNoteFilePath(logId);
     final file = File(filePath);
-    
+
     if (!await file.exists()) {
-      return null;
+      return null; // genuinely missing
     }
 
     try {
-      return await file.readAsString(encoding: const SystemEncoding());
-    } catch (e) {
-      return null;
+      return await file.readAsString(encoding: utf8);
+    } catch (_) {
+      // Decode failure (e.g. a note written by an older SystemEncoding build):
+      // read raw bytes and decode leniently instead of losing the note.
+      try {
+        return utf8.decode(await file.readAsBytes(), allowMalformed: true);
+      } catch (_) {
+        return null;
+      }
     }
   }
 
